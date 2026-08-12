@@ -30,10 +30,33 @@ app.use((req, res, next) => {
 });
 
 // ── CORS
+const defaultOrigins = [
+  'http://localhost:3000',
+  'http://localhost:5000',
+  'https://restaurant-psi-henna-35.vercel.app',
+  'https://letoiledoree.com',
+  'https://www.letoiledoree.com',
+];
+
+const envOrigins = (process.env.CLIENT_URL || '')
+  .split(',')
+  .map((url) => url.trim().replace(/\/+$/, ''))
+  .filter(Boolean);
+
+const allowedOrigins = Array.from(new Set([...defaultOrigins, ...envOrigins]));
+
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'https://restaurant-psi-henna-35.vercel.app',
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    const cleanOrigin = origin.replace(/\/+$/, '');
+    if (allowedOrigins.includes(cleanOrigin) || /\.vercel\.app$/.test(cleanOrigin)) {
+      return callback(null, true);
+    }
+    return callback(null, false);
+  },
   credentials: true,
 }));
+
 
 // ── Body parsers
 app.use(express.json({ limit: '10mb' }));
