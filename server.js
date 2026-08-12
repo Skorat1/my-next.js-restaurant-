@@ -31,7 +31,7 @@ app.use((req, res, next) => {
 
 // ── CORS
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'https://restaurant-git-main-satishs-projects-76d6d643.vercel.app/',
+  origin: process.env.CLIENT_URL || 'https://restaurant-psi-henna-35.vercel.app',
   credentials: true,
 }));
 
@@ -78,18 +78,18 @@ app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/signup', authLimiter);
 
 // ── Routes
-app.use('/api/auth',         require('./routes/auth'));
-app.use('/api/menu',         require('./routes/menu'));
-app.use('/api/contact',      require('./routes/contact'));
+app.use('/api/auth', require('./routes/auth'));
+app.use('/api/menu', require('./routes/menu'));
+app.use('/api/contact', require('./routes/contact'));
 app.use('/api/reservations', require('./routes/reservations'));
-app.use('/api/newsletter',   require('./routes/newsletter'));
-app.use('/api/orders',       require('./routes/orders'));
-app.use('/api/payments',     require('./routes/payments'));
-app.use('/api/reviews',      require('./routes/reviews'));
-app.use('/api/coupons',      require('./routes/coupons'));
-app.use('/api/membership',   require('./routes/membership'));
-app.use('/api/media',        require('./routes/media'));
-app.use('/api/admin',        require('./routes/admin'));
+app.use('/api/newsletter', require('./routes/newsletter'));
+app.use('/api/orders', require('./routes/orders'));
+app.use('/api/payments', require('./routes/payments'));
+app.use('/api/reviews', require('./routes/reviews'));
+app.use('/api/coupons', require('./routes/coupons'));
+app.use('/api/membership', require('./routes/membership'));
+app.use('/api/media', require('./routes/media'));
+app.use('/api/admin', require('./routes/admin'));
 
 // ── Health check
 app.get('/', (req, res) => {
