@@ -31,7 +31,7 @@ app.use((req, res, next) => {
 
 // ── CORS
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:3000',
+  origin: process.env.CLIENT_URL || 'https://restaurant-git-main-satishs-projects-76d6d643.vercel.app/',
   credentials: true,
 }));
 
