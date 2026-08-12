@@ -4078,3 +4078,18 @@
 {"level":"info","message":"🚀 Server running on port 5000","timestamp":"2026-08-12 15:36:56"}
 {"level":"info","message":"🚀 Server running on port 5000","timestamp":"2026-08-12 15:37:19"}
 {"level":"info","message":"🚀 Server running on port 5000","timestamp":"2026-08-12 15:37:23"}
+{"level":"info","message":"🚀 Server running on port 5000","timestamp":"2026-08-12 15:48:07"}
+{"level":"info","message":"🚀 Server running on port 5000","timestamp":"2026-08-12 15:52:10"}
+{"level":"info","message":"🚀 Server running on port 5000","timestamp":"2026-08-12 15:55:07"}
+{"ip":"::1","level":"debug","message":"OPTIONS /api/auth/signup 204","timestamp":"2026-08-12 15:55:33"}
+{"ip":"::1","level":"debug","message":"OPTIONS /api/auth/signup 204","timestamp":"2026-08-12 15:57:00"}
+{"ip":"::1","level":"debug","message":"POST /api/auth/signup 200","timestamp":"2026-08-12 16:20:40"}
+{"level":"info","message":"🚀 Server running on port 5000","timestamp":"2026-08-12 16:37:50"}
+{"ip":"::1","level":"debug","message":"GET / 200","timestamp":"2026-08-12 16:39:51"}
+{"ip":"::1","level":"debug","message":"OPTIONS /api/auth/me 204","timestamp":"2026-08-12 16:40:31"}
+{"ip":"::1","level":"debug","message":"GET /api/auth/me 200","timestamp":"2026-08-12 16:40:31"}
+{"ip":"::1","level":"debug","message":"OPTIONS /api/auth/login 204","timestamp":"2026-08-12 16:43:24"}
+{"ip":"::1","level":"debug","message":"POST /api/auth/login 400","timestamp":"2026-08-12 16:43:25"}
+{"ip":"::1","level":"debug","message":"POST /api/auth/login 400","timestamp":"2026-08-12 16:43:27"}
+{"ip":"::1","level":"debug","message":"OPTIONS /api/auth/login 204","timestamp":"2026-08-12 16:43:58"}
+{"ip":"::1","level":"debug","message":"POST /api/auth/login 200","timestamp":"2026-08-12 16:43:58"}

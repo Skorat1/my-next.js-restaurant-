@@ -135,9 +135,12 @@ router.post('/signup', async (req, res) => {
       console.error('Error sending welcome email:', emailErr);
     }
 
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1d' });
+    const refreshSecret = process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET;
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '15m' });
+    const refreshToken = jwt.sign({ id: user._id }, refreshSecret, { expiresIn: '7d' });
     res.json({
       token,
+      refreshToken,
       user: { _id: user._id, name, email, role: user.role, isVerified: user.isVerified },
     });
   } catch (err) {
@@ -167,17 +170,48 @@ router.post('/login', async (req, res) => {
       await user.save();
     }
 
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1d' });
+    const refreshSecret = process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET;
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '15m' });
+    const refreshToken = jwt.sign({ id: user._id }, refreshSecret, { expiresIn: '7d' });
 
     // Log login activity
     await ActivityLog.create({ user: user._id, name: user.name, email: user.email, role: user.role, action: 'login', ip: req.ip, userAgent: req.headers['user-agent'] });
 
     res.json({
       token,
+      refreshToken,
       user: { _id: user._id, name: user.name, email: user.email, role: user.role, isVerified: user.isVerified },
     });
   } catch (err) {
     res.status(500).send('Server error');
+  }
+});
+
+// REFRESH TOKEN
+router.post('/refresh', async (req, res) => {
+  try {
+    const { refreshToken } = req.body;
+    if (!refreshToken) {
+      return res.status(400).json({ msg: 'Refresh token required' });
+    }
+
+    const refreshSecret = process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET;
+    const decoded = jwt.verify(refreshToken, refreshSecret);
+    const user = await User.findById(decoded.id).select('-password');
+    if (!user) {
+      return res.status(401).json({ msg: 'User not found' });
+    }
+
+    const newToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '15m' });
+    const newRefreshToken = jwt.sign({ id: user._id }, refreshSecret, { expiresIn: '7d' });
+
+    res.json({
+      token: newToken,
+      refreshToken: newRefreshToken,
+      user: { _id: user._id, name: user.name, email: user.email, role: user.role, isVerified: user.isVerified },
+    });
+  } catch (err) {
+    res.status(401).json({ msg: 'Invalid or expired refresh token' });
   }
 });
 

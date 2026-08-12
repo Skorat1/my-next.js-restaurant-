@@ -240,6 +240,16 @@ const updateStatusHandler = async (req, res) => {
 
     const order = await Order.findByIdAndUpdate(req.params.id, { status }, { new: true });
     if (!order) return res.status(404).json({ msg: 'Order not found.' });
+
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`order_${order._id}`).emit('order_status_updated', order);
+      if (order.orderNumber) {
+        io.to(`order_${order.orderNumber}`).emit('order_status_updated', order);
+      }
+      io.emit('order_updated', order);
+    }
+
     res.json({ order, msg: 'Order status updated successfully.' });
   } catch (err) {
     console.error('Update status error:', err);

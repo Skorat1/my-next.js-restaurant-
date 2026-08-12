@@ -27,5 +27,6 @@ UserSchema.index({ isVerified: 1 });
 UserSchema.index({ verificationToken: 1 }, { sparse: true });
 UserSchema.index({ resetToken: 1 }, { sparse: true });
 UserSchema.index({ createdAt: -1 });
+UserSchema.index({ name: 'text', email: 'text' });
 
 module.exports = mongoose.model('User', UserSchema);

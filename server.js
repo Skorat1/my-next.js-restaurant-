@@ -131,9 +131,36 @@ app.use((err, req, res, _next) => {
   res.status(err.status || 500).json({ msg: err.message || 'Internal server error' });
 });
 
+// ── HTTP & Socket.io server
+const http = require('http');
+const { Server } = require('socket.io');
+
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: allowedOrigins,
+    credentials: true,
+  },
+});
+
+app.set('io', io);
+
+io.on('connection', (socket) => {
+  logger.info(`🔌 WebSocket client connected: ${socket.id}`);
+
+  socket.on('join_order', (orderId) => {
+    socket.join(`order_${orderId}`);
+    logger.debug(`Socket ${socket.id} joined room order_${orderId}`);
+  });
+
+  socket.on('disconnect', () => {
+    logger.info(`🔌 WebSocket client disconnected: ${socket.id}`);
+  });
+});
+
 // ── Start server
 const PORT = process.env.PORT || 5000;
-const server = app.listen(PORT, () => logger.info(`🚀 Server running on port ${PORT}`));
+server.listen(PORT, () => logger.info(`🚀 Server running on port ${PORT}`));
 
 // ── Graceful shutdown
 process.on('SIGTERM', () => {

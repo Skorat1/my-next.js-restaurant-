@@ -49,4 +49,9 @@ const OrderSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+OrderSchema.index({ user: 1, createdAt: -1 });
+OrderSchema.index({ status: 1 });
+OrderSchema.index({ orderNumber: 1 }, { sparse: true });
+OrderSchema.index({ paid: 1 });
+
 module.exports = mongoose.model('Order', OrderSchema);
