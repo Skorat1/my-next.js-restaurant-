@@ -10,12 +10,12 @@ function brandedEmail(title, bodyHtml) {
   return `
   <div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;border:1px solid #eee;">
     <div style="background:#0a0a0a;padding:28px;text-align:center;">
-      <h1 style="color:#f59e0b;font-family:Georgia,serif;margin:0;letter-spacing:2px;">L'ÉTOILE DORÉE</h1>
+      <h1 style="color:#f59e0b;font-family:Georgia,serif;margin:0;letter-spacing:2px;">VELORA</h1>
       <p style="color:#aaa;margin:6px 0 0;font-size:12px;text-transform:uppercase;letter-spacing:3px;">${title}</p>
     </div>
     <div style="padding:32px;">${bodyHtml}</div>
     <div style="background:#f9f9f9;padding:16px;text-align:center;border-top:1px solid #eee;">
-      <p style="color:#aaa;font-size:11px;margin:0;">© L'Étoile Dorée · Fine Dining</p>
+      <p style="color:#aaa;font-size:11px;margin:0;">© VELORA · Fine Dining</p>
     </div>
   </div>`;
 }
@@ -67,13 +67,13 @@ router.put('/:id', [auth, admin], async (req, res) => {
       try {
         await sendEmail({
           to: inquiry.email,
-          subject: `Your Inquiry has been ${status} — L'Étoile Dorée`,
+          subject: `Your Inquiry has been ${status} — VELORA`,
           html: brandedEmail(`Inquiry ${status}`, `
             <h2 style="color:#111;font-size:20px;margin:0 0 12px;">Hello ${inquiry.name},</h2>
             <p style="color:#444;line-height:1.7;margin:0 0 16px;">
               ${isConfirmed
-                ? `We are pleased to confirm that your inquiry has been reviewed and accepted by our team.`
-                : `Thank you for reaching out. After careful review, we are unable to accommodate your request at this time.`}
+              ? `We are pleased to confirm that your inquiry has been reviewed and accepted by our team.`
+              : `Thank you for reaching out. After careful review, we are unable to accommodate your request at this time.`}
             </p>
             <div style="background:#f5f5f5;border-radius:8px;padding:16px;margin:16px 0;">
               <p style="color:#888;font-size:12px;margin:0 0 6px;">Your message:</p>
@@ -81,12 +81,12 @@ router.put('/:id', [auth, admin], async (req, res) => {
             </div>
             <p style="color:#444;line-height:1.7;">
               ${isConfirmed
-                ? `A member of our team will be in touch shortly with further details. We look forward to welcoming you.`
-                : `We apologize for any inconvenience. Please feel free to contact us again or try a different request.`}
+              ? `A member of our team will be in touch shortly with further details. We look forward to welcoming you.`
+              : `We apologize for any inconvenience. Please feel free to contact us again or try a different request.`}
             </p>
             ${notes ? `<p style="color:#666;font-size:13px;margin-top:12px;"><strong>Note from our team:</strong> ${notes}</p>` : ''}
           `),
-          text: `Hello ${inquiry.name},\n\nYour inquiry has been ${status}.${notes ? '\n\nNote: ' + notes : ''}\n\n— L'Étoile Dorée`,
+          text: `Hello ${inquiry.name},\n\nYour inquiry has been ${status}.${notes ? '\n\nNote: ' + notes : ''}\n\n— VELORA`,
         });
       } catch (emailErr) {
         console.error('Error sending inquiry status email:', emailErr);
@@ -113,10 +113,10 @@ router.post('/:id/reply', [auth, admin], async (req, res) => {
 
     await sendEmail({
       to: inquiry.email,
-      subject: `Re: Your Inquiry — L'Étoile Dorée`,
+      subject: `Re: Your Inquiry — VELORA`,
       html: `
         <div style="font-family:sans-serif;max-width:560px;margin:auto">
-          <h2 style="color:#d97706">L'Étoile Dorée</h2>
+          <h2 style="color:#d97706">VELORA</h2>
           <p>Dear <strong>${inquiry.name}</strong>,</p>
           <p>Thank you for reaching out. Here is our response to your inquiry:</p>
           <blockquote style="border-left:3px solid #d97706;padding:12px 16px;background:#fafafa;color:#333">

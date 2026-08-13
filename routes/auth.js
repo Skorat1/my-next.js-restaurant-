@@ -24,13 +24,13 @@ async function sendVerificationEmail(user) {
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 520px; margin: 0 auto; background: #fff; border-radius: 12px; overflow: hidden; border: 1px solid #eee;">
         <div style="background: #0a0a0a; padding: 28px; text-align: center;">
-          <h1 style="color: #f59e0b; font-family: Georgia, serif; margin: 0; letter-spacing: 2px;">L'ÉTOILE DORÉE</h1>
+          <h1 style="color: #f59e0b; font-family: Georgia, serif; margin: 0; letter-spacing: 2px;">VELORA</h1>
           <p style="color: #aaa; margin: 6px 0 0; font-size: 12px; text-transform: uppercase; letter-spacing: 3px;">Email Confirmation</p>
         </div>
         <div style="padding: 32px;">
           <h2 style="color: #111; font-size: 20px; margin: 0 0 8px;">Hello ${user.name},</h2>
           <p style="color: #444; line-height: 1.6; margin: 0 0 16px;">
-            Thanks for creating an account at L'Étoile Dorée. Please confirm your email address by clicking the button below to activate your account.
+            Thanks for creating an account at VELORA. Please confirm your email address by clicking the button below to activate your account.
           </p>
           <div style="text-align: center; margin: 24px 0;">
             <a href="${verifyUrl}" style="display: inline-block; background: #f59e0b; color: #000; text-decoration: none; padding: 14px 32px; border-radius: 999px; font-weight: bold; font-size: 14px;">
@@ -52,13 +52,13 @@ async function sendVerificationEmail(user) {
     text: `
       Hello ${user.name},
 
-      Thanks for creating an account at L'Étoile Dorée. Please confirm your email address by visiting the link below to activate your account:
+      Thanks for creating an account at VELORA. Please confirm your email address by visiting the link below to activate your account:
 
       ${verifyUrl}
 
       If you did not create this account, you can safely ignore this email.
 
-      — L'Étoile Dorée
+      — VELORA
     `,
   });
 }
@@ -68,12 +68,12 @@ function brandedEmail(title, bodyHtml) {
   return `
   <div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;border:1px solid #eee;">
     <div style="background:#0a0a0a;padding:28px;text-align:center;">
-      <h1 style="color:#f59e0b;font-family:Georgia,serif;margin:0;letter-spacing:2px;">L'ÉTOILE DORÉE</h1>
+      <h1 style="color:#f59e0b;font-family:Georgia,serif;margin:0;letter-spacing:2px;">VELORA</h1>
       <p style="color:#aaa;margin:6px 0 0;font-size:12px;text-transform:uppercase;letter-spacing:3px;">${title}</p>
     </div>
     <div style="padding:32px;">${bodyHtml}</div>
     <div style="background:#f9f9f9;padding:16px;text-align:center;border-top:1px solid #eee;">
-      <p style="color:#aaa;font-size:11px;margin:0;">© L'Étoile Dorée · Fine Dining</p>
+      <p style="color:#aaa;font-size:11px;margin:0;">© VELORA · Fine Dining</p>
     </div>
   </div>`;
 }
@@ -126,10 +126,10 @@ router.post('/signup', async (req, res) => {
         html: brandedEmail('Welcome', `
           <h2 style="color:#111;margin:0 0 12px;">Welcome, ${user.name}!</h2>
           <p style="color:#444;line-height:1.6;margin:0 0 16px;">
-            Your account has been created successfully. We are honored to welcome you to L'Étoile Dorée.
+            Your account has been created successfully. We are honored to welcome you to VELORA.
           </p>
         `),
-        text: `Welcome, ${user.name}!\n\nYour account has been created successfully at L'Étoile Dorée. Please check your inbox for a separate email to verify your address.\n\n— L'Étoile Dorée`,
+        text: `Welcome, ${user.name}!\n\nYour account has been created successfully at VELORA. Please check your inbox for a separate email to verify your address.\n\n— VELORA`,
       });
     } catch (emailErr) {
       console.error('Error sending welcome email:', emailErr);
@@ -250,13 +250,13 @@ router.get('/verify/:token', async (req, res) => {
     try {
       await sendEmail({
         to: user.email,
-        subject: `Email Verified — L'Étoile Dorée`,
+        subject: `Email Verified — VELORA`,
         html: brandedEmail('Email Verified', `
           <h2 style="color:#111;font-size:20px;margin:0 0 12px;">Your email is verified ✅</h2>
           <p style="color:#444;line-height:1.7;margin:0 0 16px;">Hello ${user.name}, your email address has been successfully verified.</p>
-          <p style="color:#444;line-height:1.7;">You now have full access to your account. We look forward to welcoming you at L'Étoile Dorée.</p>
+          <p style="color:#444;line-height:1.7;">You now have full access to your account. We look forward to welcoming you at VELORA.</p>
         `),
-        text: `Hello ${user.name},\n\nYour email has been successfully verified. You now have full access to your account.\n\n— L'Étoile Dorée`,
+        text: `Hello ${user.name},\n\nYour email has been successfully verified. You now have full access to your account.\n\n— VELORA`,
       });
     } catch (emailErr) {
       console.error('Error sending verified confirmation email:', emailErr);

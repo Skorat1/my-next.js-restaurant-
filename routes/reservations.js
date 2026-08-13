@@ -11,12 +11,12 @@ function brandedEmail(title, bodyHtml) {
   return `
   <div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;border:1px solid #eee;">
     <div style="background:#0a0a0a;padding:28px;text-align:center;">
-      <h1 style="color:#f59e0b;font-family:Georgia,serif;margin:0;letter-spacing:2px;">L'ÉTOILE DORÉE</h1>
+      <h1 style="color:#f59e0b;font-family:Georgia,serif;margin:0;letter-spacing:2px;">VELORA</h1>
       <p style="color:#aaa;margin:6px 0 0;font-size:12px;text-transform:uppercase;letter-spacing:3px;">${title}</p>
     </div>
     <div style="padding:32px;">${bodyHtml}</div>
     <div style="background:#f9f9f9;padding:16px;text-align:center;border-top:1px solid #eee;">
-      <p style="color:#aaa;font-size:11px;margin:0;">© L'Étoile Dorée · Fine Dining</p>
+      <p style="color:#aaa;font-size:11px;margin:0;">© VELORA · Fine Dining</p>
     </div>
   </div>`;
 }
@@ -84,7 +84,7 @@ router.post('/', async (req, res) => {
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 520px; margin: 0 auto; background: #fff; border-radius: 12px; overflow: hidden; border: 1px solid #eee;">
             <div style="background: #0a0a0a; padding: 28px; text-align: center;">
-              <h1 style="color: #f59e0b; font-family: Georgia, serif; margin: 0; letter-spacing: 2px;">L'ÉTOILE DORÉE</h1>
+              <h1 style="color: #f59e0b; font-family: Georgia, serif; margin: 0; letter-spacing: 2px;">VELORA</h1>
               <p style="color: #aaa; margin: 6px 0 0; font-size: 12px; text-transform: uppercase; letter-spacing: 3px;">Reservation Confirmation</p>
             </div>
             <div style="padding: 32px;">
@@ -118,7 +118,7 @@ router.post('/', async (req, res) => {
 
           If you did not make this reservation, you can safely ignore this email.
 
-          — L'Étoile Dorée
+          — VELORA
         `,
       });
     } catch (emailErr) {
@@ -191,13 +191,13 @@ router.put('/:id', [auth, admin], async (req, res) => {
       try {
         await sendEmail({
           to: reservation.email,
-          subject: `Reservation ${status} — L'Étoile Dorée`,
+          subject: `Reservation ${status} — VELORA`,
           html: brandedEmail(`Reservation ${status}`, `
             <h2 style="color:#111;font-size:20px;margin:0 0 12px;">Hello ${reservation.name},</h2>
             <p style="color:#444;line-height:1.7;margin:0 0 16px;">
               ${isConfirmed
-                ? `We are pleased to confirm your table reservation at L'Étoile Dorée.`
-                : `We regret to inform you that your reservation request could not be accommodated at this time.`}
+              ? `We are pleased to confirm your table reservation at VELORA.`
+              : `We regret to inform you that your reservation request could not be accommodated at this time.`}
             </p>
             <table style="width:100%;border-collapse:collapse;margin:16px 0;">
               <tr><td style="padding:8px 0;color:#888;font-size:13px;">Date &amp; Time</td><td style="padding:8px 0;color:#111;font-size:13px;font-weight:bold;">${dateStr}</td></tr>
@@ -209,7 +209,7 @@ router.put('/:id', [auth, admin], async (req, res) => {
               ? `<p style="color:#444;line-height:1.7;">We look forward to welcoming you. Please arrive a few minutes early. If you need to make any changes, feel free to contact us.</p>`
               : `<p style="color:#444;line-height:1.7;">We apologize for the inconvenience. Please try booking a different date or contact us directly for assistance.</p>`}
           `),
-          text: `Hello ${reservation.name},\n\nYour reservation on ${dateStr} for ${reservation.guests} guest(s) has been ${status}.${notes ? '\n\nNote: ' + notes : ''}\n\n— L'Étoile Dorée`,
+          text: `Hello ${reservation.name},\n\nYour reservation on ${dateStr} for ${reservation.guests} guest(s) has been ${status}.${notes ? '\n\nNote: ' + notes : ''}\n\n— VELORA`,
         });
       } catch (emailErr) {
         console.error('Error sending reservation status email:', emailErr);

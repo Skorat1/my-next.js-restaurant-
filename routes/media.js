@@ -22,7 +22,7 @@ const DEFAULT_MEDIA = [
   },
   {
     title: "LIVE: Evening Service Kitchen Cam — Open Kitchen Prep",
-    description: "Real-time broadcast directly from L'Étoile Dorée open kitchen line during peak evening dinner service.",
+    description: "Real-time broadcast directly from VELORA open kitchen line during peak evening dinner service.",
     type: "livestream",
     category: "Live Kitchen",
     videoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",

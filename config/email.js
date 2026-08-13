@@ -11,21 +11,21 @@ const isConfigured = Boolean(
 // Disabled pool: true to prevent persistent idle socket ECONNRESET errors on Windows/firewalls
 const transporter = isConfigured
   ? nodemailer.createTransport({
-      pool: false, 
-      host: process.env.EMAIL_HOST,
-      port: Number(process.env.EMAIL_PORT) || 587,
-      secure: process.env.EMAIL_SECURE ? ['true', '1', 'yes'].includes(process.env.EMAIL_SECURE) : (Number(process.env.EMAIL_PORT) === 465),
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
-      connectionTimeout: 10000,
-      greetingTimeout: 10000,
-      socketTimeout: 15000,
-      tls: {
-        rejectUnauthorized: false,
-      },
-    })
+    pool: false,
+    host: process.env.EMAIL_HOST,
+    port: Number(process.env.EMAIL_PORT) || 587,
+    secure: process.env.EMAIL_SECURE ? ['true', '1', 'yes'].includes(process.env.EMAIL_SECURE) : (Number(process.env.EMAIL_PORT) === 465),
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS,
+    },
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 15000,
+    tls: {
+      rejectUnauthorized: false,
+    },
+  })
   : null;
 
 let isSmtpReady = false;
@@ -61,7 +61,7 @@ async function sendEmail({ to, subject, html, text }) {
 
   try {
     const info = await transporter.sendMail({
-      from: `"L'Étoile Dorée" <${EMAIL_FROM}>`,
+      from: `"VELORA" <${EMAIL_FROM}>`,
       to,
       subject,
       html,
