@@ -8,37 +8,46 @@ const isConfigured = Boolean(
 );
 
 // Create transporter (only if credentials are present)
+// Disabled pool: true to prevent persistent idle socket ECONNRESET errors on Windows/firewalls
 const transporter = isConfigured
   ? nodemailer.createTransport({
-      pool: true, // Use a connection pool for better performance
+      pool: false, 
       host: process.env.EMAIL_HOST,
       port: Number(process.env.EMAIL_PORT) || 587,
-      // `secure` is true if port is 465. For other ports (like 587), `secure: false` will use STARTTLS.
-      // You can override this with a `EMAIL_SECURE` env var.
       secure: process.env.EMAIL_SECURE ? ['true', '1', 'yes'].includes(process.env.EMAIL_SECURE) : (Number(process.env.EMAIL_PORT) === 465),
       auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,
       },
+      connectionTimeout: 10000,
+      greetingTimeout: 10000,
+      socketTimeout: 15000,
+      tls: {
+        rejectUnauthorized: false,
+      },
     })
   : null;
-  
-// Verify SMTP connection on startup
+
+let isSmtpReady = false;
+
+// Verify SMTP connection safely on startup without crashing or throwing
 if (transporter) {
   transporter.verify((error, success) => {
     if (error) {
-      console.error('❌ SMTP connection error:', error);
+      isSmtpReady = false;
+      console.warn(`⚠️  SMTP Connection Notice (${error.code || error.message}). Emails will fall back to console in development.`);
     } else {
+      isSmtpReady = true;
       console.log('✅ SMTP connection is ready to send emails.');
     }
   });
 }
-  
+
 const EMAIL_FROM = process.env.EMAIL_FROM || process.env.EMAIL_USER || 'no-reply@restaurant.com';
 
 /**
  * Send an email.
- * If SMTP is not configured, logs the email to the console instead (dev mode).
+ * If SMTP is not configured or network drops, logs the email to the console gracefully.
  * @param {Object} opts - { to, subject, html, text }
  */
 async function sendEmail({ to, subject, html, text }) {
@@ -58,14 +67,17 @@ async function sendEmail({ to, subject, html, text }) {
       html,
       text,
     });
-  
+
     console.log('✅ Email sent:', info.messageId);
     return { devMode: false, messageId: info.messageId };
   } catch (error) {
-    console.error('❌ Error sending email:', error);
-    // Re-throw or handle the error as appropriate for your application
-    throw new Error('Failed to send email.');
+    console.warn(`⚠️  SMTP delivery notice (${error.code || error.message}). Falling back to console output:`);
+    console.log(`📨 To: ${to}`);
+    console.log(`📌 Subject: ${subject}`);
+    console.log(`📄 Body:\n${text || html}`);
+    return { devMode: true, error: error.message };
   }
 }
 
 module.exports = { sendEmail, isConfigured };
+

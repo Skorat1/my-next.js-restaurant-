@@ -4093,3 +4093,6 @@
 {"ip":"::1","level":"debug","message":"POST /api/auth/login 400","timestamp":"2026-08-12 16:43:27"}
 {"ip":"::1","level":"debug","message":"OPTIONS /api/auth/login 204","timestamp":"2026-08-12 16:43:58"}
 {"ip":"::1","level":"debug","message":"POST /api/auth/login 200","timestamp":"2026-08-12 16:43:58"}
+{"level":"info","message":"🚀 Server running on port 5000","timestamp":"2026-08-12 17:08:16"}
+{"level":"info","message":"🚀 Server running on port 5000","timestamp":"2026-08-13 10:04:03"}
+{"level":"info","message":"🚀 Server running on port 5000","timestamp":"2026-08-13 10:13:42"}

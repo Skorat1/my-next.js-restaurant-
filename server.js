@@ -10,7 +10,12 @@ const logger = require('./config/logger');
 require('dotenv').config();
 
 const app = express();
-connectDB();
+
+// Ensure DB is connected for serverless function invocations
+app.use(async (req, res, next) => {
+  await connectDB();
+  next();
+});
 
 // ── Security headers
 app.use(helmet({
