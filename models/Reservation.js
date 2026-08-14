@@ -1,8 +1,6 @@
 const mongoose = require('mongoose');
-const crypto = require('crypto');
 
 const ReservationSchema = new mongoose.Schema({
-  passCode: { type: String, unique: true, sparse: true },
   name: { type: String, required: true },
   email: { type: String, required: true },
   phone: { type: String },
@@ -30,19 +28,10 @@ const ReservationSchema = new mongoose.Schema({
   verificationToken: { type: String },
 }, { timestamps: true });
 
-ReservationSchema.pre('save', function (next) {
-  if (!this.passCode) {
-    const randomHex = crypto.randomBytes(3).toString('hex').toUpperCase();
-    this.passCode = `RES-${randomHex}`;
-  }
-  next();
-});
-
 ReservationSchema.index({ email: 1 });
 ReservationSchema.index({ status: 1 });
 ReservationSchema.index({ createdAt: -1 });
 ReservationSchema.index({ verificationToken: 1 }, { sparse: true });
 
 module.exports = mongoose.model('Reservation', ReservationSchema);
-
 
