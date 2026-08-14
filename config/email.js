@@ -50,7 +50,7 @@ const EMAIL_FROM = process.env.EMAIL_FROM || process.env.EMAIL_USER || 'no-reply
  * If SMTP is not configured or network drops, logs the email to the console gracefully.
  * @param {Object} opts - { to, subject, html, text }
  */
-async function sendEmail({ to, subject, html, text }) {
+async function sendEmail({ to, subject, html, text, attachments }) {
   if (!transporter) {
     console.log('⚠️  [Email not sent — SMTP not configured]');
     console.log(`📨 To: ${to}`);
@@ -66,6 +66,7 @@ async function sendEmail({ to, subject, html, text }) {
       subject,
       html,
       text,
+      attachments,
     });
 
     console.log('✅ Email sent:', info.messageId);

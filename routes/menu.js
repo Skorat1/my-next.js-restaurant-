@@ -190,4 +190,17 @@ router.delete('/:id', [auth, admin], async (req, res) => {
   }
 });
 
+// PUT /api/menu/:id/availability — Quick 1-click availability toggle
+router.put('/:id/availability', [auth, admin], async (req, res) => {
+  try {
+    const item = await Menu.findById(req.params.id);
+    if (!item) return res.status(404).json({ msg: 'Item not found' });
+    item.available = req.body.available !== undefined ? req.body.available : !item.available;
+    await item.save();
+    res.json({ success: true, available: item.available, item });
+  } catch (err) {
+    res.status(500).json({ msg: 'Server Error' });
+  }
+});
+
 module.exports = router;

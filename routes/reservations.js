@@ -1,26 +1,98 @@
 const express = require('express');
 const router = express.Router();
 const crypto = require('crypto');
+const QRCode = require('qrcode');
 const Reservation = require('../models/Reservation');
 const auth = require('../middleware/auth');
 const admin = require('../middleware/admin');
 const { sendEmail } = require('../config/email');
 
-// Reusable branded email wrapper
-function brandedEmail(title, bodyHtml) {
+// Helper to generate base64 QR Code image
+async function generateQRCodeDataUrl(data) {
+  try {
+    return await QRCode.toDataURL(JSON.stringify(data), {
+      errorCorrectionLevel: 'H',
+      margin: 2,
+      width: 260,
+      color: {
+        dark: '#000000',
+        light: '#ffffff',
+      },
+    });
+  } catch (err) {
+    console.error('Error generating QR code:', err);
+    return null;
+  }
+}
+
+// Reusable reservation pass email template
+function passEmailHtml({ name, passCode, qrDataUrl, dateStr, guests, status, tableInfo, verifyUrl }) {
   return `
-  <div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;border:1px solid #eee;">
-    <div style="background:#0a0a0a;padding:28px;text-align:center;">
-      <h1 style="color:#f59e0b;font-family:Georgia,serif;margin:0;letter-spacing:2px;">VELORA</h1>
-      <p style="color:#aaa;margin:6px 0 0;font-size:12px;text-transform:uppercase;letter-spacing:3px;">${title}</p>
+  <div style="font-family: Arial, sans-serif; max-width: 520px; margin: 0 auto; background: #0a0a0a; border-radius: 20px; overflow: hidden; border: 1px solid #333; color: #fff; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+    <div style="background: linear-gradient(135deg, #1c1917, #0a0a0a); padding: 32px 24px; text-align: center; border-bottom: 1px solid #262626;">
+      <h1 style="color: #f59e0b; font-family: Georgia, serif; margin: 0; font-size: 28px; letter-spacing: 4px;">VELORA</h1>
+      <p style="color: #a3a3a3; margin: 6px 0 0; font-size: 10px; text-transform: uppercase; letter-spacing: 3px;">Official Dining Pass &amp; Entry QR</p>
     </div>
-    <div style="padding:32px;">${bodyHtml}</div>
-    <div style="background:#f9f9f9;padding:16px;text-align:center;border-top:1px solid #eee;">
-      <p style="color:#aaa;font-size:11px;margin:0;">© VELORA · Fine Dining</p>
+
+    <div style="padding: 32px 24px; text-align: center;">
+      <p style="color: #e5e5e5; font-size: 15px; margin: 0 0 20px;">Dear <strong>${name}</strong>,</p>
+
+      <!-- Pass Code Badge -->
+      <div style="background: rgba(245, 158, 11, 0.1); border: 2px dashed #f59e0b; border-radius: 14px; padding: 16px 24px; display: inline-block; margin-bottom: 24px;">
+        <p style="color: #a3a3a3; font-size: 10px; text-transform: uppercase; letter-spacing: 2px; margin: 0 0 4px;">Reservation Pass Code</p>
+        <p style="color: #f59e0b; font-family: monospace; font-size: 26px; font-weight: bold; margin: 0; letter-spacing: 4px;">${passCode}</p>
+      </div>
+
+      <!-- QR Code Display -->
+      ${qrDataUrl ? `
+      <div style="background: #ffffff; padding: 16px; border-radius: 18px; display: inline-block; margin-bottom: 24px; box-shadow: 0 4px 15px rgba(245,158,11,0.2);">
+        <img src="${qrDataUrl}" alt="Reservation Entry QR Code" style="width: 180px; height: 180px; display: block;" />
+        <p style="color: #666; font-size: 10px; margin: 8px 0 0; font-family: sans-serif; font-weight: bold;">Scan at Entrance</p>
+      </div>
+      ` : ''}
+
+      <!-- Booking Details Table -->
+      <div style="background: #171717; border-radius: 14px; padding: 20px; text-align: left; margin-bottom: 24px; border: 1px solid #262626;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 13px; color: #d4d4d4;">
+          <tr style="border-bottom: 1px solid #262626;">
+            <td style="padding: 10px 0; color: #888;">Date &amp; Time</td>
+            <td style="padding: 10px 0; font-weight: bold; color: #fff; text-align: right;">${dateStr}</td>
+          </tr>
+          <tr style="border-bottom: 1px solid #262626;">
+            <td style="padding: 10px 0; color: #888;">Party Size</td>
+            <td style="padding: 10px 0; font-weight: bold; color: #fff; text-align: right;">${guests} Guest(s)</td>
+          </tr>
+          <tr style="border-bottom: 1px solid #262626;">
+            <td style="padding: 10px 0; color: #888;">Table Assignment</td>
+            <td style="padding: 10px 0; font-weight: bold; color: #f59e0b; text-align: right;">${tableInfo}</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px 0; color: #888;">Pass Status</td>
+            <td style="padding: 10px 0; font-weight: bold; color: ${status === 'Confirmed' ? '#10b981' : '#f59e0b'}; text-align: right;">${status}</td>
+          </tr>
+        </table>
+      </div>
+
+      ${verifyUrl ? `
+      <div style="margin: 24px 0;">
+        <a href="${verifyUrl}" style="display: inline-block; background: #f59e0b; color: #000; text-decoration: none; padding: 14px 32px; border-radius: 999px; font-weight: bold; font-size: 12px; text-transform: uppercase; letter-spacing: 2px;">
+          Confirm Booking Pass
+        </a>
+      </div>
+      ` : ''}
+
+      <p style="color: #737373; font-size: 12px; line-height: 1.6; margin: 0;">
+        Please present your Pass Code or QR Code upon arrival. We look forward to serving you.
+      </p>
+    </div>
+
+    <div style="background: #171717; padding: 16px; text-align: center; border-top: 1px solid #262626;">
+      <p style="color: #737373; font-size: 11px; margin: 0;">© VELORA Fine Dining · Haute Gastronomy</p>
     </div>
   </div>`;
 }
 
+// POST /api/reservations (Create new table reservation)
 router.post('/', async (req, res) => {
   try {
     const {
@@ -29,7 +101,6 @@ router.post('/', async (req, res) => {
       promoCode, discountAmount, totalAmount, specialRequests, isWaitlist
     } = req.body;
 
-    // Robustly parse date string (handles 12-hour formats like "2026-08-07T7:00 PM")
     let parsedDate;
     if (date) {
       const match = String(date).match(/^(\d{4}-\d{2}-\d{2})[T\s](\d+):(\d+)\s*(AM|PM)?/i);
@@ -48,10 +119,12 @@ router.post('/', async (req, res) => {
       parsedDate = new Date();
     }
 
-    // Generate a verification token
     const verificationToken = crypto.randomBytes(32).toString('hex');
+    const randomHex = crypto.randomBytes(3).toString('hex').toUpperCase();
+    const passCode = `RES-${randomHex}`;
 
     const reservation = new Reservation({
+      passCode,
       name,
       email,
       phone,
@@ -72,61 +145,49 @@ router.post('/', async (req, res) => {
     });
     await reservation.save();
 
+    // Generate QR Code
+    const qrPayload = {
+      passCode: reservation.passCode,
+      reservationId: reservation._id,
+      name: reservation.name,
+      date: reservation.date,
+      guests: reservation.guests,
+      tableNo: reservation.tableNo || reservation.tableId,
+    };
+    const qrDataUrl = await generateQRCodeDataUrl(qrPayload);
+
     // Build verification link
     const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
     const verifyUrl = `${baseUrl}/verify/${verificationToken}`;
+    const dateStr = new Date(reservation.date).toLocaleString('en-US', {
+      weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit'
+    });
 
-    // Send verification email (falls back to console log in dev)
+    // Send email with Pass Code & QR Code
     try {
       await sendEmail({
         to: email,
-        subject: 'Confirm your reservation — L\'Étoile Dorée',
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 520px; margin: 0 auto; background: #fff; border-radius: 12px; overflow: hidden; border: 1px solid #eee;">
-            <div style="background: #0a0a0a; padding: 28px; text-align: center;">
-              <h1 style="color: #f59e0b; font-family: Georgia, serif; margin: 0; letter-spacing: 2px;">VELORA</h1>
-              <p style="color: #aaa; margin: 6px 0 0; font-size: 12px; text-transform: uppercase; letter-spacing: 3px;">Reservation Confirmation</p>
-            </div>
-            <div style="padding: 32px;">
-              <h2 style="color: #111; font-size: 20px; margin: 0 0 8px;">Hello ${name},</h2>
-              <p style="color: #444; line-height: 1.6; margin: 0 0 16px;">
-                We received your table reservation request. Please confirm your email address by clicking the button below to finalize your booking.
-              </p>
-              <div style="text-align: center; margin: 24px 0;">
-                <a href="${verifyUrl}" style="display: inline-block; background: #f59e0b; color: #000; text-decoration: none; padding: 14px 32px; border-radius: 999px; font-weight: bold; font-size: 14px;">
-                  Confirm Reservation
-                </a>
-              </div>
-              <p style="color: #444; line-height: 1.6; margin: 0 0 16px; word-break: break-all;">
-                If the button doesn't work, copy and paste this link into your browser:
-              </p>
-              <p style="color: #888; font-size: 12px; word-break: break-all; background: #f5f5f5; padding: 12px; border-radius: 8px;">
-                ${verifyUrl}
-              </p>
-              <p style="color: #999; font-size: 12px; line-height: 1.6; margin-top: 24px;">
-                If you did not make this reservation, you can safely ignore this email.
-              </p>
-            </div>
-          </div>
-        `,
-        text: `
-          Hello ${name},
-
-          We received your table reservation request. Please confirm your email address by visiting the link below to finalize your booking:
-
-          ${verifyUrl}
-
-          If you did not make this reservation, you can safely ignore this email.
-
-          — VELORA
-        `,
+        subject: `Your Reservation Pass [${reservation.passCode}] — VELORA`,
+        html: passEmailHtml({
+          name,
+          passCode: reservation.passCode,
+          qrDataUrl,
+          dateStr,
+          guests: reservation.guests,
+          status: reservation.status,
+          tableInfo: `${reservation.tableNo || reservation.tableId || 'T1'} (${reservation.area || 'Main Room'})`,
+          verifyUrl,
+        }),
+        text: `Hello ${name},\n\nYour reservation pass code is ${reservation.passCode}.\nDate: ${dateStr}\nGuests: ${reservation.guests}\n\nPlease confirm your booking link: ${verifyUrl}\n\n— VELORA`,
       });
     } catch (emailErr) {
-      console.error('Error sending reservation verification email:', emailErr);
+      console.error('Error sending reservation email with QR code:', emailErr);
     }
 
     res.status(201).json({
-      msg: 'Reservation received — please check your email to verify.',
+      msg: 'Reservation created — Pass Code and QR Code sent to your email!',
+      passCode: reservation.passCode,
+      qrDataUrl,
       reservation,
     });
   } catch (err) {
@@ -146,14 +207,32 @@ router.get('/verify/:token', async (req, res) => {
     }
 
     if (reservation.verified) {
-      return res.json({ msg: 'This reservation has already been verified.', reservation });
+      return res.json({ msg: 'This reservation pass has already been verified.', reservation });
     }
 
     reservation.verified = true;
     reservation.verificationToken = undefined;
+    if (reservation.status === 'Pending') {
+      reservation.status = 'Confirmed';
+    }
     await reservation.save();
 
-    res.json({ msg: 'Reservation verified successfully!', reservation });
+    // Re-generate QR Code upon verification
+    const qrDataUrl = await generateQRCodeDataUrl({
+      passCode: reservation.passCode,
+      reservationId: reservation._id,
+      name: reservation.name,
+      date: reservation.date,
+      guests: reservation.guests,
+      verified: true,
+    });
+
+    res.json({
+      msg: 'Reservation pass verified successfully!',
+      passCode: reservation.passCode,
+      qrDataUrl,
+      reservation,
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ msg: 'Server error' });
@@ -180,39 +259,45 @@ router.put('/:id', [auth, admin], async (req, res) => {
     if (notes !== undefined) reservation.notes = notes;
     if (tableNo !== undefined) reservation.tableNo = tableNo;
     if (area !== undefined) reservation.area = area;
+
+    if (!reservation.passCode) {
+      const randomHex = crypto.randomBytes(3).toString('hex').toUpperCase();
+      reservation.passCode = `RES-${randomHex}`;
+    }
+
     await reservation.save();
 
-    // Email user on Confirmed or Declined
+    // Email user on status update with QR Pass
     if (status === 'Confirmed' || status === 'Declined') {
-      const isConfirmed = status === 'Confirmed';
       const dateStr = new Date(reservation.date).toLocaleString('en-US', {
         weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit',
       });
+      const qrDataUrl = await generateQRCodeDataUrl({
+        passCode: reservation.passCode,
+        reservationId: reservation._id,
+        name: reservation.name,
+        date: reservation.date,
+        guests: reservation.guests,
+        status,
+      });
+
       try {
         await sendEmail({
           to: reservation.email,
-          subject: `Reservation ${status} — VELORA`,
-          html: brandedEmail(`Reservation ${status}`, `
-            <h2 style="color:#111;font-size:20px;margin:0 0 12px;">Hello ${reservation.name},</h2>
-            <p style="color:#444;line-height:1.7;margin:0 0 16px;">
-              ${isConfirmed
-              ? `We are pleased to confirm your table reservation at VELORA.`
-              : `We regret to inform you that your reservation request could not be accommodated at this time.`}
-            </p>
-            <table style="width:100%;border-collapse:collapse;margin:16px 0;">
-              <tr><td style="padding:8px 0;color:#888;font-size:13px;">Date &amp; Time</td><td style="padding:8px 0;color:#111;font-size:13px;font-weight:bold;">${dateStr}</td></tr>
-              <tr><td style="padding:8px 0;color:#888;font-size:13px;">Guests</td><td style="padding:8px 0;color:#111;font-size:13px;font-weight:bold;">${reservation.guests}</td></tr>
-              <tr><td style="padding:8px 0;color:#888;font-size:13px;">Status</td><td style="padding:8px 0;font-size:13px;font-weight:bold;color:${isConfirmed ? '#16a34a' : '#dc2626'}">${status}</td></tr>
-              ${notes ? `<tr><td style="padding:8px 0;color:#888;font-size:13px;">Note</td><td style="padding:8px 0;color:#444;font-size:13px;">${notes}</td></tr>` : ''}
-            </table>
-            ${isConfirmed
-              ? `<p style="color:#444;line-height:1.7;">We look forward to welcoming you. Please arrive a few minutes early. If you need to make any changes, feel free to contact us.</p>`
-              : `<p style="color:#444;line-height:1.7;">We apologize for the inconvenience. Please try booking a different date or contact us directly for assistance.</p>`}
-          `),
-          text: `Hello ${reservation.name},\n\nYour reservation on ${dateStr} for ${reservation.guests} guest(s) has been ${status}.${notes ? '\n\nNote: ' + notes : ''}\n\n— VELORA`,
+          subject: `Reservation ${status} [Pass: ${reservation.passCode}] — VELORA`,
+          html: passEmailHtml({
+            name: reservation.name,
+            passCode: reservation.passCode,
+            qrDataUrl: status === 'Confirmed' ? qrDataUrl : null,
+            dateStr,
+            guests: reservation.guests,
+            status,
+            tableInfo: `${reservation.tableNo || 'T1'} (${reservation.area || 'Main Room'})`,
+          }),
+          text: `Hello ${reservation.name},\n\nYour reservation [${reservation.passCode}] on ${dateStr} has been ${status}.\n\n— VELORA`,
         });
       } catch (emailErr) {
-        console.error('Error sending reservation status email:', emailErr);
+        console.error('Error sending reservation status update email:', emailErr);
       }
     }
 
@@ -233,4 +318,5 @@ router.delete('/:id', [auth, admin], async (req, res) => {
 });
 
 module.exports = router;
+
 
