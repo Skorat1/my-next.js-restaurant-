@@ -241,7 +241,9 @@ router.get('/verify/:token', async (req, res) => {
 // Get all reservations (Admin)
 router.get('/all', [auth, admin], async (req, res) => {
   try {
-    const reservations = await Reservation.find().sort({ createdAt: -1 });
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const reservations = await Reservation.find({ date: { $gte: todayStart } }).sort({ date: 1 });
     res.json(reservations);
   } catch (err) {
     res.status(500).json({ msg: 'Server error' });

@@ -19,6 +19,9 @@ router.use(auth, admin);
 // GET /api/admin/stats — Dashboard summary
 router.get('/stats', async (req, res) => {
   try {
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+
     const [
       totalReservations,
       pendingReservations,
@@ -53,7 +56,7 @@ router.get('/stats', async (req, res) => {
       Review.countDocuments({ status: 'Pending' }),
       Coupon.countDocuments(),
       Coupon.countDocuments({ active: true }),
-      Reservation.find().sort({ createdAt: -1 }).limit(8),
+      Reservation.find({ date: { $gte: todayStart } }).sort({ date: 1 }).limit(8),
       Order.find().sort({ createdAt: -1 }).limit(8),
     ]);
 

@@ -41,6 +41,8 @@ const OrderSchema = new mongoose.Schema(
       enum: ['Pending', 'Confirmed', 'Preparing', 'Ready', 'Out for Delivery', 'Delivered', 'Cancelled'],
       default: 'Pending',
     },
+    prepStartTime:     { type: Date, default: null },
+    prepEndTime:       { type: Date, default: null },
     subtotal:          { type: Number, default: 0 },
     discount:          { type: Number, default: 0 },
     tax:               { type: Number, default: 0 },

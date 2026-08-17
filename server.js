@@ -122,6 +122,8 @@ app.use('/api/analytics', require('./routes/analytics'));
 app.use('/api/inventory', require('./routes/inventory'));
 app.use('/api/webhooks', require('./routes/deliveryWebhooks'));
 app.use('/api/crm', require('./routes/crm'));
+app.use('/api/tables', require('./routes/tables'));
+app.use('/api/shifts', require('./routes/shifts'));
 
 // ── Health check
 app.get('/', (req, res) => {

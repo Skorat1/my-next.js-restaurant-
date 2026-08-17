@@ -318,8 +318,17 @@ const updateStatusHandler = async (req, res) => {
     const valid = ['Pending', 'Confirmed', 'Preparing', 'Ready', 'Out for Delivery', 'Delivered', 'Cancelled'];
     if (!valid.includes(status)) return res.status(400).json({ msg: 'Invalid status value.' });
 
-    const order = await Order.findByIdAndUpdate(req.params.id, { status }, { new: true });
+    const order = await Order.findById(req.params.id);
     if (!order) return res.status(404).json({ msg: 'Order not found.' });
+
+    order.status = status;
+    if (status === 'Preparing' && !order.prepStartTime) {
+      order.prepStartTime = new Date();
+    }
+    if (['Ready', 'Out for Delivery', 'Delivered'].includes(status) && !order.prepEndTime) {
+      order.prepEndTime = new Date();
+    }
+    await order.save();
 
     // Send WhatsApp Feedback Request
     if (status === 'Delivered' && order.customer?.phone) {
