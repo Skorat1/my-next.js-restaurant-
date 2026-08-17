@@ -121,6 +121,7 @@ app.use('/api/admin', require('./routes/admin'));
 app.use('/api/analytics', require('./routes/analytics'));
 app.use('/api/inventory', require('./routes/inventory'));
 app.use('/api/webhooks', require('./routes/deliveryWebhooks'));
+app.use('/api/crm', require('./routes/crm'));
 
 // ── Health check
 app.get('/', (req, res) => {

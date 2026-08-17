@@ -13,14 +13,27 @@ const UserSchema = new mongoose.Schema({
   resetTokenExpiry: { type: Date },
   loyaltyPoints: { type: Number, default: 0 },
   totalSpent: { type: Number, default: 0 },
+  totalOrders: { type: Number, default: 0 },
+  lastVisitDate: { type: Date },
+  averageOrderValue: { type: Number, default: 0 },
+  
   membership: {
-    tier: { type: String, enum: ['gold', 'platinum'], default: null },
+    tier: { type: String, enum: ['silver', 'gold', 'platinum'], default: 'silver' },
     active: { type: Boolean, default: false },
     startedAt: { type: Date },
     expiresAt: { type: Date },
     razorpayOrderId: { type: String },
     razorpayPaymentId: { type: String },
+    walletPassId: { type: String }, // Apple/Google wallet reference
   },
+
+  // Preferences & Tags (CRM)
+  tags: { type: [String], default: [] },
+  dietaryPreferences: { type: [String], default: [] },
+  specialDates: [{ 
+    event: { type: String }, // 'Birthday', 'Anniversary', etc.
+    date: { type: Date } 
+  }],
 }, { timestamps: true });
 
 UserSchema.index({ role: 1 });
