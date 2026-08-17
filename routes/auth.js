@@ -104,6 +104,7 @@ router.post('/signup', async (req, res) => {
       email,
       password: hashedPassword,
       role: isAdmin ? 'admin' : 'customer',
+      isApproved: isAdmin,
       verificationToken,
     });
     await user.save();
@@ -135,13 +136,20 @@ router.post('/signup', async (req, res) => {
       console.error('Error sending welcome email:', emailErr);
     }
 
+    if (!user.isApproved) {
+      return res.json({
+        msg: 'registration_pending',
+        user: { _id: user._id, name, email, role: user.role, isVerified: user.isVerified, isApproved: user.isApproved },
+      });
+    }
+
     const refreshSecret = process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET;
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1d' });
     const refreshToken = jwt.sign({ id: user._id }, refreshSecret, { expiresIn: '7d' });
     res.json({
       token,
       refreshToken,
-      user: { _id: user._id, name, email, role: user.role, isVerified: user.isVerified },
+      user: { _id: user._id, name, email, role: user.role, isVerified: user.isVerified, isApproved: user.isApproved },
     });
   } catch (err) {
     res.status(500).send('Server error');
@@ -174,13 +182,17 @@ router.post('/login', async (req, res) => {
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1d' });
     const refreshToken = jwt.sign({ id: user._id }, refreshSecret, { expiresIn: '7d' });
 
+    if (!user.isApproved) {
+      return res.status(401).json({ msg: 'Your account is pending admin approval.' });
+    }
+
     // Log login activity
     await ActivityLog.create({ user: user._id, name: user.name, email: user.email, role: user.role, action: 'login', ip: req.ip, userAgent: req.headers['user-agent'] });
 
     res.json({
       token,
       refreshToken,
-      user: { _id: user._id, name: user.name, email: user.email, role: user.role, isVerified: user.isVerified },
+      user: { _id: user._id, name: user.name, email: user.email, role: user.role, isVerified: user.isVerified, isApproved: user.isApproved },
     });
   } catch (err) {
     res.status(500).send('Server error');
@@ -208,7 +220,7 @@ router.post('/refresh', async (req, res) => {
     res.json({
       token: newToken,
       refreshToken: newRefreshToken,
-      user: { _id: user._id, name: user.name, email: user.email, role: user.role, isVerified: user.isVerified },
+      user: { _id: user._id, name: user.name, email: user.email, role: user.role, isVerified: user.isVerified, isApproved: user.isApproved },
     });
   } catch (err) {
     res.status(401).json({ msg: 'Invalid or expired refresh token' });

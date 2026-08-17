@@ -115,6 +115,7 @@ router.post('/users', async (req, res) => {
       password: hashedPassword,
       role: role === 'admin' ? 'admin' : 'customer',
       isVerified: true,
+      isApproved: true,
     });
     await user.save();
 
@@ -186,7 +187,52 @@ router.delete('/users/:id', async (req, res) => {
   }
 });
 
-// PUT /api/admin/users/:id/role — Promote / demote admin
+// PUT /api/admin/users/:id/approve — Approve a user
+router.put('/users/:id/approve', async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ msg: 'User not found' });
+    if (user.isApproved) return res.status(400).json({ msg: 'User is already approved' });
+
+    user.isApproved = true;
+    await user.save();
+
+    // Send an email letting them know they're approved
+    try {
+      const { sendEmail } = require('../config/email');
+      await sendEmail({
+        to: user.email,
+        subject: 'Account Approved — VELORA',
+        html: `
+          <div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;border:1px solid #eee;">
+            <div style="background:#0a0a0a;padding:28px;text-align:center;">
+              <h1 style="color:#f59e0b;font-family:Georgia,serif;margin:0;letter-spacing:2px;">VELORA</h1>
+              <p style="color:#aaa;margin:6px 0 0;font-size:12px;text-transform:uppercase;letter-spacing:3px;">Account Approved</p>
+            </div>
+            <div style="padding:32px;">
+              <h2 style="color:#111;margin:0 0 12px;">Hello ${user.name},</h2>
+              <p style="color:#444;line-height:1.6;margin:0 0 16px;">
+                Good news! Your account registration has been reviewed and approved by an administrator. You can now log in to the portal and access your account features.
+              </p>
+              <div style="text-align:center;margin:24px 0;">
+                <a href="${process.env.BASE_URL || 'http://localhost:3000'}/login" style="display:inline-block;background:#f59e0b;color:#000;text-decoration:none;padding:14px 32px;border-radius:999px;font-weight:bold;font-size:14px;">Log In Now</a>
+              </div>
+            </div>
+          </div>
+        `,
+        text: `Hello ${user.name},\n\nYour account has been approved by an administrator. You can now log in at ${process.env.BASE_URL || 'http://localhost:3000'}/login.\n\n— VELORA`
+      });
+    } catch (err) {
+      console.error('Failed to send approval email:', err);
+    }
+
+    res.json({ success: true, msg: 'User approved successfully', user: { _id: user._id, name: user.name, email: user.email, role: user.role, isApproved: user.isApproved } });
+  } catch (err) {
+    res.status(500).json({ msg: 'Server error' });
+  }
+});
+
+
 router.put('/users/:id/role', async (req, res) => {
   try {
     const { role } = req.body;
@@ -197,7 +243,7 @@ router.put('/users/:id/role', async (req, res) => {
     const user = await User.findById(req.params.id);
     if (!user) return res.status(404).json({ msg: 'User not found' });
 
-    // Prevent removing your own admin role
+
     if (user._id.toString() === req.user._id.toString() && role !== 'admin') {
       return res.status(400).json({ msg: 'You cannot remove your own admin role' });
     }

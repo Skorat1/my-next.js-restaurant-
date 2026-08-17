@@ -243,6 +243,40 @@ router.post('/', auth, async (req, res) => {
       io.emit('new_order', order);
     }
 
+    try {
+      const { sendEmail } = require('../config/email');
+      const itemsListHtml = detailedItems.map(i => `<li>${i.quantity}x ${i.name} - ₹${i.lineTotal}</li>`).join('');
+      await sendEmail({
+        to: customer.email,
+        subject: `Order Confirmed - ${order.orderNumber}`,
+        html: `
+          <div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;border:1px solid #eee;">
+            <div style="background:#0a0a0a;padding:28px;text-align:center;">
+              <h1 style="color:#f59e0b;font-family:Georgia,serif;margin:0;letter-spacing:2px;">VELORA</h1>
+              <p style="color:#aaa;margin:6px 0 0;font-size:12px;text-transform:uppercase;letter-spacing:3px;">Order Confirmation</p>
+            </div>
+            <div style="padding:32px;">
+              <h2 style="color:#111;margin:0 0 12px;">Hello ${customer.name},</h2>
+              <p style="color:#444;line-height:1.6;margin:0 0 16px;">
+                Thank you for your order! Your order <strong>${order.orderNumber}</strong> has been successfully placed.
+              </p>
+              <h3 style="color:#111;margin:20px 0 10px;">Order Summary</h3>
+              <ul style="color:#444;padding-left:20px;margin-bottom:16px;">
+                ${itemsListHtml}
+              </ul>
+              <p style="color:#444;line-height:1.6;margin:0 0 16px;">
+                <strong>Payment Method:</strong> ${paymentMethod}<br/>
+                <strong>Total Amount:</strong> ₹${total.toFixed(2)}
+              </p>
+            </div>
+          </div>
+        `,
+        text: `Hello ${customer.name},\n\nThank you for your order! Your order ${order.orderNumber} has been successfully placed for a total of ₹${total.toFixed(2)}.\n\n— VELORA`
+      });
+    } catch (emailErr) {
+      console.error('Error sending order email:', emailErr);
+    }
+
     res.status(201).json({ order, msg: 'Order placed successfully.' });
   } catch (err) {
     console.error('POST /orders error:', err);

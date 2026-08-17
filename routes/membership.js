@@ -70,6 +70,37 @@ router.post('/purchase', auth, async (req, res) => {
         razorpayPaymentId: `sim-${Date.now()}`,
       };
       await user.save();
+      
+      // Send email
+      try {
+        const { sendEmail } = require('../config/email');
+        await sendEmail({
+          to: user.email,
+          subject: `Membership Upgrade Successful - ${plan.name}`,
+          html: `
+            <div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;border:1px solid #eee;">
+              <div style="background:#0a0a0a;padding:28px;text-align:center;">
+                <h1 style="color:#f59e0b;font-family:Georgia,serif;margin:0;letter-spacing:2px;">VELORA</h1>
+                <p style="color:#aaa;margin:6px 0 0;font-size:12px;text-transform:uppercase;letter-spacing:3px;">Membership Upgrade</p>
+              </div>
+              <div style="padding:32px;">
+                <h2 style="color:#111;margin:0 0 12px;">Hello ${user.name},</h2>
+                <p style="color:#444;line-height:1.6;margin:0 0 16px;">
+                  Congratulations! Your account has been successfully upgraded to the <strong>${plan.name}</strong> membership tier.
+                </p>
+                <p style="color:#444;line-height:1.6;margin:0 0 16px;">
+                  <strong>Price Paid:</strong> ₹${plan.price}<br/>
+                  <strong>Valid Until:</strong> ${expiresAt.toLocaleDateString()}
+                </p>
+              </div>
+            </div>
+          `,
+          text: `Hello ${user.name},\n\nCongratulations! Your account has been successfully upgraded to the ${plan.name} membership tier, valid until ${expiresAt.toLocaleDateString()}.\n\n— VELORA`
+        });
+      } catch (err) {
+        console.error('Failed to send membership email:', err);
+      }
+
       return res.json({
         simulated: true,
         tier: plan.id,
@@ -147,6 +178,36 @@ router.post('/verify', auth, async (req, res) => {
       razorpayPaymentId: razorpay_payment_id,
     };
     await user.save();
+
+    // Send email
+    try {
+      const { sendEmail } = require('../config/email');
+      await sendEmail({
+        to: user.email,
+        subject: `Membership Upgrade Successful - ${plan.name}`,
+        html: `
+          <div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;border:1px solid #eee;">
+            <div style="background:#0a0a0a;padding:28px;text-align:center;">
+              <h1 style="color:#f59e0b;font-family:Georgia,serif;margin:0;letter-spacing:2px;">VELORA</h1>
+              <p style="color:#aaa;margin:6px 0 0;font-size:12px;text-transform:uppercase;letter-spacing:3px;">Membership Upgrade</p>
+            </div>
+            <div style="padding:32px;">
+              <h2 style="color:#111;margin:0 0 12px;">Hello ${user.name},</h2>
+              <p style="color:#444;line-height:1.6;margin:0 0 16px;">
+                Congratulations! Your account has been successfully upgraded to the <strong>${plan.name}</strong> membership tier.
+              </p>
+              <p style="color:#444;line-height:1.6;margin:0 0 16px;">
+                <strong>Price Paid:</strong> ₹${plan.price}<br/>
+                <strong>Valid Until:</strong> ${expiresAt.toLocaleDateString()}
+              </p>
+            </div>
+          </div>
+        `,
+        text: `Hello ${user.name},\n\nCongratulations! Your account has been successfully upgraded to the ${plan.name} membership tier, valid until ${expiresAt.toLocaleDateString()}.\n\n— VELORA`
+      });
+    } catch (err) {
+      console.error('Failed to send membership email:', err);
+    }
 
     res.json({ success: true, msg: 'Membership activated!', tier: plan.id, expiresAt });
   } catch (err) {

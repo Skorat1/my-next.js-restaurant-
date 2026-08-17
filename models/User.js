@@ -7,6 +7,7 @@ const UserSchema = new mongoose.Schema({
   role: { type: String, default: 'customer' }, // customer, admin, manager, waiter, delivery
   permissions: { type: [String], default: [] }, // granular permissions
   isVerified: { type: Boolean, default: false },
+  isApproved: { type: Boolean, default: false },
   verificationToken: { type: String },
   resetToken: { type: String },
   resetTokenExpiry: { type: Date },
@@ -24,6 +25,7 @@ const UserSchema = new mongoose.Schema({
 
 UserSchema.index({ role: 1 });
 UserSchema.index({ isVerified: 1 });
+UserSchema.index({ isApproved: 1 });
 UserSchema.index({ verificationToken: 1 }, { sparse: true });
 UserSchema.index({ resetToken: 1 }, { sparse: true });
 UserSchema.index({ createdAt: -1 });
