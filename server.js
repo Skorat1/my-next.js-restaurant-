@@ -130,7 +130,6 @@ app.get('/', (req, res) => {
 // ── Debug env endpoint
 app.get('/api/debug-env', (req, res) => {
   res.json({
-    dbState: mongoose.connection.readyState,
     env: {
       hasMongoUri: !!process.env.MONGO_URI,
       hasJwtSecret: !!process.env.JWT_SECRET,
