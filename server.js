@@ -131,7 +131,7 @@ app.get('/', (req, res) => {
 app.get('/api/debug-env', (req, res) => {
   res.json({
     env: {
-      hasMongoUri: !!process.env.MONGO_URI,
+      mongoUriPrefix: process.env.MONGO_URI ? process.env.MONGO_URI.substring(0, 10) : 'none',
       hasJwtSecret: !!process.env.JWT_SECRET,
       clientUrl: process.env.CLIENT_URL || 'not set',
       nodeEnv: process.env.NODE_ENV
