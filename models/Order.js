@@ -51,6 +51,7 @@ const OrderSchema = new mongoose.Schema(
 
 OrderSchema.index({ user: 1, createdAt: -1 });
 OrderSchema.index({ status: 1 });
+OrderSchema.index({ status: 1, createdAt: -1 }); // Added for KDS and Analytics
 OrderSchema.index({ orderNumber: 1 }, { sparse: true });
 OrderSchema.index({ paid: 1 });
 

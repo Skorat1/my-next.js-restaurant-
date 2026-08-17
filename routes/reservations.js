@@ -145,16 +145,8 @@ router.post('/', async (req, res) => {
     });
     await reservation.save();
 
-    // Generate QR Code
-    const qrPayload = {
-      passCode: reservation.passCode,
-      reservationId: reservation._id,
-      name: reservation.name,
-      date: reservation.date,
-      guests: reservation.guests,
-      tableNo: reservation.tableNo || reservation.tableId,
-    };
-    const qrDataUrl = await generateQRCodeDataUrl(qrPayload);
+    // Skip QR Code generation for now, it will be generated upon admin confirmation
+    const qrDataUrl = null;
 
     // Build verification link
     const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
@@ -163,31 +155,38 @@ router.post('/', async (req, res) => {
       weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit'
     });
 
-    // Send email with Pass Code & QR Code
+    // Send email indicating pending status
     try {
       await sendEmail({
         to: email,
-        subject: `Your Reservation Pass [${reservation.passCode}] — VELORA`,
-        html: passEmailHtml({
-          name,
-          passCode: reservation.passCode,
-          qrDataUrl,
-          dateStr,
-          guests: reservation.guests,
-          status: reservation.status,
-          tableInfo: `${reservation.tableNo || reservation.tableId || 'T1'} (${reservation.area || 'Main Room'})`,
-          verifyUrl,
-        }),
-        text: `Hello ${name},\n\nYour reservation pass code is ${reservation.passCode}.\nDate: ${dateStr}\nGuests: ${reservation.guests}\n\nPlease confirm your booking link: ${verifyUrl}\n\n— VELORA`,
+        subject: `Reservation Request Received — VELORA`,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 520px; margin: 0 auto; background: #0a0a0a; border-radius: 20px; overflow: hidden; border: 1px solid #333; color: #fff; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+            <div style="background: linear-gradient(135deg, #1c1917, #0a0a0a); padding: 32px 24px; text-align: center; border-bottom: 1px solid #262626;">
+              <h1 style="color: #f59e0b; font-family: Georgia, serif; margin: 0; font-size: 28px; letter-spacing: 4px;">VELORA</h1>
+              <p style="color: #a3a3a3; margin: 6px 0 0; font-size: 10px; text-transform: uppercase; letter-spacing: 3px;">Reservation Request Pending</p>
+            </div>
+            <div style="padding: 32px 24px; text-align: center;">
+              <p style="color: #e5e5e5; font-size: 15px; margin: 0 0 20px;">Dear <strong>${name}</strong>,</p>
+              <p style="color: #d4d4d4; font-size: 14px; margin: 0 0 20px;">
+                Your reservation request for <strong>${dateStr}</strong> for <strong>${reservation.guests} Guest(s)</strong> has been successfully received and is currently <strong>Pending Confirmation</strong>.
+              </p>
+              <p style="color: #a3a3a3; font-size: 13px; line-height: 1.6; margin: 0 0 24px;">
+                Our team is reviewing your request. Once confirmed, you will receive another email containing your official Dining Pass and QR Code for entry.
+              </p>
+              <p style="color: #737373; font-size: 12px; margin: 0;">We appreciate your patience and look forward to serving you.</p>
+            </div>
+          </div>
+        `,
+        text: `Hello ${name},\n\nYour reservation request for ${dateStr} for ${reservation.guests} guests has been received and is pending confirmation.\nOnce confirmed by our team, you will receive your official Dining Pass with a QR Code.\n\n— VELORA`,
       });
     } catch (emailErr) {
       console.error('Error sending reservation email with QR code:', emailErr);
     }
 
     res.status(201).json({
-      msg: 'Reservation created — Pass Code and QR Code sent to your email!',
+      msg: 'Reservation created — Pending Confirmation!',
       passCode: reservation.passCode,
-      qrDataUrl,
       reservation,
     });
   } catch (err) {

@@ -8,7 +8,7 @@ const MENU_ITEMS = [
     name: 'Gujarati Thali',
     description:
       'A wholesome traditional Gujarati platter — dal, rice, roti, shaak, farsan, and a sweet treat.',
-    price: 12.99,
+    price: 199.99,
     category: 'Main',
     image: 'gujratithali.png',
     available: true,
@@ -20,7 +20,7 @@ const MENU_ITEMS = [
     name: 'Punjabi Thali',
     description:
       'A rich Punjabi spread with butter paneer, dal makhani, naan, jeera rice, and salad.',
-    price: 14.99,
+    price: 514.99,
     category: 'Main',
     image: 'panjabi thali.jpg',
     available: true,
@@ -32,7 +32,7 @@ const MENU_ITEMS = [
     name: 'Punjabi Thali Deluxe',
     description:
       'An upgraded Punjabi feast with extra sides, tandoori bread, and a signature dessert.',
-    price: 17.99,
+    price: 520,
     category: 'Main',
     image: 'panjabi thali1.jpg',
     available: true,
@@ -44,7 +44,7 @@ const MENU_ITEMS = [
     name: 'Punjabi Thali Special',
     description:
       'A generous Punjabi platter featuring a variety of curries, breads, and rice.',
-    price: 13.99,
+    price: 599.99,
     category: 'Main',
     image: 'panjabi thali.jfif',
     available: true,

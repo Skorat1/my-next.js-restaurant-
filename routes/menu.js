@@ -8,6 +8,7 @@ const Review = require('../models/Review');
 const Order = require('../models/Order');
 const auth = require('../middleware/auth');
 const admin = require('../middleware/admin');
+const cache = require('../middleware/cache');
 
 // ── Multer config — save uploaded menu images to backend/uploads
 const UPLOAD_DIR = path.join(__dirname, '..', 'uploads');
@@ -85,7 +86,7 @@ async function enrichWithRatings(menuItems) {
 }
 
 // GET /api/menu — with optional search, category, price, dietary filters
-router.get('/', async (req, res) => {
+router.get('/', cache(300), async (req, res) => {
   try {
     const { q, category, minPrice, maxPrice, dietary, available } = req.query;
     const filter = {};
@@ -148,7 +149,7 @@ router.get('/reorder/:userId', auth, async (req, res) => {
 });
 
 // GET /api/menu/categories — distinct categories
-router.get('/categories', async (req, res) => {
+router.get('/categories', cache(300), async (req, res) => {
   try {
     const cats = await Menu.distinct('category');
     res.json(cats);

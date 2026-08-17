@@ -1,22 +1,22 @@
 const mongoose = require('mongoose');
 
 const UserSchema = new mongoose.Schema({
-  name:              { type: String, required: true },
-  email:             { type: String, required: true, unique: true },
-  password:          { type: String, required: true },
-  role:              { type: String, default: 'customer' }, // customer, admin, manager, waiter, delivery
-  permissions:       { type: [String], default: [] }, // granular permissions
-isVerified:        { type: Boolean, default: false },
+  name: { type: String, required: true },
+  email: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
+  role: { type: String, default: 'customer' }, // customer, admin, manager, waiter, delivery
+  permissions: { type: [String], default: [] }, // granular permissions
+  isVerified: { type: Boolean, default: false },
   verificationToken: { type: String },
-  resetToken:        { type: String },
-  resetTokenExpiry:  { type: Date },
-  loyaltyPoints:     { type: Number, default: 0 },
-  totalSpent:        { type: Number, default: 0 },
+  resetToken: { type: String },
+  resetTokenExpiry: { type: Date },
+  loyaltyPoints: { type: Number, default: 0 },
+  totalSpent: { type: Number, default: 0 },
   membership: {
-    tier:            { type: String, enum: ['gold', 'platinum'], default: null },
-    active:          { type: Boolean, default: false },
-    startedAt:       { type: Date },
-    expiresAt:       { type: Date },
+    tier: { type: String, enum: ['gold', 'platinum'], default: null },
+    active: { type: Boolean, default: false },
+    startedAt: { type: Date },
+    expiresAt: { type: Date },
     razorpayOrderId: { type: String },
     razorpayPaymentId: { type: String },
   },

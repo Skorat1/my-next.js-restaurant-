@@ -136,7 +136,7 @@ router.post('/signup', async (req, res) => {
     }
 
     const refreshSecret = process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET;
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '15m' });
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1d' });
     const refreshToken = jwt.sign({ id: user._id }, refreshSecret, { expiresIn: '7d' });
     res.json({
       token,
@@ -171,7 +171,7 @@ router.post('/login', async (req, res) => {
     }
 
     const refreshSecret = process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET;
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '15m' });
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1d' });
     const refreshToken = jwt.sign({ id: user._id }, refreshSecret, { expiresIn: '7d' });
 
     // Log login activity
@@ -202,7 +202,7 @@ router.post('/refresh', async (req, res) => {
       return res.status(401).json({ msg: 'User not found' });
     }
 
-    const newToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '15m' });
+    const newToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1d' });
     const newRefreshToken = jwt.sign({ id: user._id }, refreshSecret, { expiresIn: '7d' });
 
     res.json({

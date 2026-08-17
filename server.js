@@ -118,6 +118,7 @@ app.use('/api/coupons', require('./routes/coupons'));
 app.use('/api/membership', require('./routes/membership'));
 app.use('/api/media', require('./routes/media'));
 app.use('/api/admin', require('./routes/admin'));
+app.use('/api/analytics', require('./routes/analytics'));
 
 // ── Health check
 app.get('/', (req, res) => {

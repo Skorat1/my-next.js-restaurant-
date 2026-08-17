@@ -78,6 +78,22 @@ const getAllOrdersHandler = async (req, res) => {
 router.get('/', auth, admin, getAllOrdersHandler);
 router.get('/all', auth, admin, getAllOrdersHandler);
 
+// GET /api/orders/kds — admin: get active orders for Kitchen Display System
+router.get('/kds/active', auth, admin, async (req, res) => {
+  try {
+    const orders = await Order.find({
+      status: { $in: ['Pending', 'Confirmed', 'Preparing', 'Ready'] },
+    })
+      .populate('user', 'name email')
+      .sort({ createdAt: 1 }) // oldest first for kitchen
+      .lean();
+    res.json(orders);
+  } catch (err) {
+    console.error('GET /orders/kds/active admin error:', err);
+    res.status(500).json({ msg: 'Server Error' });
+  }
+});
+
 // GET /api/orders/:id — get a specific order (owner, matching email, or admin)
 router.get('/:id', auth, async (req, res) => {
   try {
@@ -221,6 +237,11 @@ router.post('/', auth, async (req, res) => {
     // Award loyalty points (1 point per $1 spent)
     const earnedPoints = Math.floor(total);
     await User.findByIdAndUpdate(req.user._id, { $inc: { loyaltyPoints: earnedPoints } });
+
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('new_order', order);
+    }
 
     res.status(201).json({ order, msg: 'Order placed successfully.' });
   } catch (err) {
