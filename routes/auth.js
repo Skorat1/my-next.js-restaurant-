@@ -97,14 +97,18 @@ router.post('/signup', async (req, res) => {
 
     const isAdmin = adminEmails.includes(email.toLowerCase());
 
+    const requestedRole = req.body.role || (isAdmin ? 'admin' : 'customer');
+    // Customers are auto-approved. Staff need admin approval. Root admin is auto-approved.
+    const isApproved = isAdmin || requestedRole === 'customer';
+
     const verificationToken = crypto.randomBytes(32).toString('hex');
 
     user = new User({
       name,
       email,
       password: hashedPassword,
-      role: isAdmin ? 'admin' : 'customer',
-      isApproved: isAdmin,
+      role: requestedRole,
+      isApproved,
       verificationToken,
     });
     await user.save();

@@ -4,6 +4,8 @@ const mongoose = require('mongoose');
 const Order = require('../models/Order');
 const Coupon = require('../models/Coupon');
 const Menu = require('../models/Menu');
+const Recipe = require('../models/Recipe');
+const Ingredient = require('../models/Ingredient');
 const User = require('../models/User');
 const auth = require('../middleware/auth');
 const admin = require('../middleware/admin');
@@ -127,6 +129,7 @@ router.post('/', auth, async (req, res) => {
       items,
       customer,
       paymentMethod,
+      payments, // optional array for split bills
       couponCode,
       loyaltyPoints,
       deliverySlot,
@@ -174,6 +177,9 @@ router.post('/', auth, async (req, res) => {
         addons,
         options,
         lineTotal,
+        station: menuItem && menuItem.station ? menuItem.station : 'Main Kitchen',
+        estimatedPrepTime: menuItem && menuItem.estimatedPrepTime ? menuItem.estimatedPrepTime : 15,
+        itemStatus: 'Pending',
       });
     }
 
@@ -215,6 +221,7 @@ router.post('/', auth, async (req, res) => {
       items: detailedItems,
       customer,
       paymentMethod,
+      payments: payments || [],
       subtotal: Math.round(subtotal * 100) / 100,
       discount: Math.round(discount * 100) / 100,
       tax,
@@ -228,6 +235,24 @@ router.post('/', auth, async (req, res) => {
     });
 
     await order.save();
+
+    // Deduct inventory
+    try {
+      for (const item of detailedItems) {
+        if (item.itemId && mongoose.Types.ObjectId.isValid(item.itemId)) {
+          const recipe = await Recipe.findOne({ menuItem: item.itemId });
+          if (recipe && recipe.ingredients) {
+            for (const recIng of recipe.ingredients) {
+              await Ingredient.findByIdAndUpdate(recIng.ingredient, {
+                $inc: { currentStock: -(recIng.quantity * item.quantity) }
+              });
+            }
+          }
+        }
+      }
+    } catch (invErr) {
+      console.error('Inventory deduction error:', invErr);
+    }
 
     // Deduct loyalty points if used
     if (pointsUsed > 0) {
@@ -296,6 +321,16 @@ const updateStatusHandler = async (req, res) => {
     const order = await Order.findByIdAndUpdate(req.params.id, { status }, { new: true });
     if (!order) return res.status(404).json({ msg: 'Order not found.' });
 
+    // Send WhatsApp Feedback Request
+    if (status === 'Delivered' && order.customer?.phone) {
+      try {
+        const { sendFeedbackRequest } = require('../services/whatsapp');
+        await sendFeedbackRequest(order.customer.phone, order.customer.name, order._id);
+      } catch (e) {
+        console.error('WhatsApp feedback request failed:', e);
+      }
+    }
+
     const io = req.app.get('io');
     if (io) {
       io.to(`order_${order._id}`).emit('order_status_updated', order);
@@ -314,6 +349,46 @@ const updateStatusHandler = async (req, res) => {
 
 router.patch('/:id/status', auth, admin, updateStatusHandler);
 router.put('/:id/status', auth, admin, updateStatusHandler);
+
+// PATCH /api/orders/:id/items/:itemId/status — KDS: update individual item status
+router.patch('/:id/items/:itemId/status', auth, admin, async (req, res) => {
+  try {
+    const { status } = req.body;
+    if (!['Pending', 'Preparing', 'Ready'].includes(status)) {
+      return res.status(400).json({ msg: 'Invalid item status.' });
+    }
+
+    const order = await Order.findById(req.params.id);
+    if (!order) return res.status(404).json({ msg: 'Order not found.' });
+
+    let item;
+    if (mongoose.Types.ObjectId.isValid(req.params.itemId)) {
+      item = order.items.id(req.params.itemId);
+    }
+    if (!item) {
+      item = order.items.find(i => String(i.itemId) === req.params.itemId || String(i._id) === req.params.itemId);
+    }
+    
+    if (!item) return res.status(404).json({ msg: 'Item not found in order.' });
+
+    item.itemStatus = status;
+    if (status === 'Preparing' && !item.prepStartTime) {
+      item.prepStartTime = new Date();
+    }
+    await order.save();
+
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`order_${order._id}`).emit('order_item_updated', { orderId: order._id, itemId: item._id, status });
+      io.emit('kds_item_updated', { orderId: order._id, item });
+    }
+
+    res.json({ order, msg: 'Item status updated.' });
+  } catch (err) {
+    console.error('Update item status error:', err);
+    res.status(500).json({ msg: 'Server Error' });
+  }
+});
 
 // DELETE /api/orders/:id — admin: delete order
 router.delete('/:id', auth, admin, async (req, res) => {

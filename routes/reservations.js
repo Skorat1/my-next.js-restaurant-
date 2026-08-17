@@ -280,6 +280,22 @@ router.put('/:id', [auth, admin], async (req, res) => {
         status,
       });
 
+      // Send WhatsApp Notification
+      if (status === 'Confirmed' && reservation.phone) {
+        try {
+          const { sendBookingConfirmation } = require('../services/whatsapp');
+          await sendBookingConfirmation(
+            reservation.phone, 
+            reservation.name, 
+            new Date(reservation.date).toLocaleDateString(), 
+            new Date(reservation.date).toLocaleTimeString(), 
+            reservation.guests
+          );
+        } catch (e) {
+          console.error('Failed to send WhatsApp confirmation', e);
+        }
+      }
+
       try {
         await sendEmail({
           to: reservation.email,

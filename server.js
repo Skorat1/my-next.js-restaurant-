@@ -119,6 +119,8 @@ app.use('/api/membership', require('./routes/membership'));
 app.use('/api/media', require('./routes/media'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/analytics', require('./routes/analytics'));
+app.use('/api/inventory', require('./routes/inventory'));
+app.use('/api/webhooks', require('./routes/deliveryWebhooks'));
 
 // ── Health check
 app.get('/', (req, res) => {

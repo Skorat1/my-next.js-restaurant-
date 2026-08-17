@@ -33,6 +33,8 @@ const MenuSchema = new mongoose.Schema({
   tags: [{ type: String }],
   addons: [AddonSchema],
   optionGroups: [OptionGroupSchema],
+  station: { type: String, enum: ['Tandoor', 'Chinese', 'Bakery', 'Beverage', 'Main Kitchen', 'Dessert'], default: 'Main Kitchen' },
+  estimatedPrepTime: { type: Number, default: 15 }, // in minutes
 });
 
 MenuSchema.index({ category: 1 });

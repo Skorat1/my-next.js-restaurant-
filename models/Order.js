@@ -9,6 +9,11 @@ const OrderItemSchema = new mongoose.Schema({
   addons:   [{ name: String, price: Number }],
   options:  [{ group: String, value: String }],
   lineTotal:{ type: Number, default: 0 },
+  // KDS tracking fields
+  station:           { type: String, default: 'Main Kitchen' },
+  itemStatus:        { type: String, enum: ['Pending', 'Preparing', 'Ready'], default: 'Pending' },
+  estimatedPrepTime: { type: Number, default: 15 }, // minutes
+  prepStartTime:     { type: Date, default: null },
 });
 
 const CustomerSchema = new mongoose.Schema({
@@ -25,7 +30,12 @@ const OrderSchema = new mongoose.Schema(
     user:              { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     items:             [OrderItemSchema],
     customer:          { type: CustomerSchema, required: true },
-    paymentMethod:     { type: String, required: true },
+    paymentMethod:     { type: String, required: true }, // 'Cash', 'UPI', 'Card', 'Mixed'
+    payments:          [{
+      method: { type: String, required: true },
+      amount: { type: Number, required: true },
+      txId: { type: String } // optional transaction ID
+    }],
     status:            {
       type: String,
       enum: ['Pending', 'Confirmed', 'Preparing', 'Ready', 'Out for Delivery', 'Delivered', 'Cancelled'],
