@@ -127,6 +127,19 @@ app.get('/', (req, res) => {
   res.json({ status: 'ok', message: 'Restaurant portal API is online.', timestamp: new Date().toISOString() });
 });
 
+// ── Debug env endpoint
+app.get('/api/debug-env', (req, res) => {
+  res.json({
+    dbState: mongoose.connection.readyState,
+    env: {
+      hasMongoUri: !!process.env.MONGO_URI,
+      hasJwtSecret: !!process.env.JWT_SECRET,
+      clientUrl: process.env.CLIENT_URL || 'not set',
+      nodeEnv: process.env.NODE_ENV
+    }
+  });
+});
+
 // ── 404 handler
 app.use((req, res) => {
   res.status(404).json({ msg: 'Route not found' });
