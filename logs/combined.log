@@ -6674,3 +6674,7 @@
 {"ip":"::1","level":"debug","message":"OPTIONS /api/admin/stats 204","timestamp":"2026-08-17 15:10:40"}
 {"ip":"::1","level":"debug","message":"GET /api/admin/stats 304","timestamp":"2026-08-17 15:10:40"}
 {"level":"info","message":"🚀 Server running on port 5000","timestamp":"2026-08-17 15:10:50"}
+{"ip":"::1","level":"debug","message":"OPTIONS /api/admin/stats 204","timestamp":"2026-08-17 15:11:10"}
+{"ip":"::1","level":"debug","message":"GET /api/admin/stats 304","timestamp":"2026-08-17 15:11:10"}
+{"ip":"::1","level":"debug","message":"OPTIONS /api/admin/stats 204","timestamp":"2026-08-17 15:11:39"}
+{"ip":"::1","level":"debug","message":"GET /api/admin/stats 304","timestamp":"2026-08-17 15:11:39"}
