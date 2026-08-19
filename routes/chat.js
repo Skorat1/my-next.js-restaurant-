@@ -2,12 +2,11 @@ const express = require('express');
 const router = express.Router();
 const ChatSession = require('../models/ChatSession');
 const auth = require('../middleware/auth');
-const authorize = require('../middleware/authorize');
-
+const admin = require('../middleware/admin');
 // @route   GET /api/chat/active
 // @desc    Get all active chat sessions
 // @access  Private (Admin/Staff only)
-router.get('/active', auth, authorize('admin', 'manager', 'owner', 'chef'), async (req, res) => {
+router.get('/active', auth, admin, async (req, res) => {
   try {
     const sessions = await ChatSession.find({ status: 'open' }).sort({ updatedAt: -1 });
     res.json(sessions);
@@ -20,7 +19,7 @@ router.get('/active', auth, authorize('admin', 'manager', 'owner', 'chef'), asyn
 // @route   GET /api/chat/:id
 // @desc    Get chat session by ID
 // @access  Private (Admin/Staff only)
-router.get('/:id', auth, authorize('admin', 'manager', 'owner', 'chef'), async (req, res) => {
+router.get('/:id', auth, admin, async (req, res) => {
   try {
     const session = await ChatSession.findById(req.params.id);
     if (!session) {
@@ -39,7 +38,7 @@ router.get('/:id', auth, authorize('admin', 'manager', 'owner', 'chef'), async (
 // @route   PUT /api/chat/:id/close
 // @desc    Close a chat session
 // @access  Private (Admin/Staff only)
-router.put('/:id/close', auth, authorize('admin', 'manager', 'owner', 'chef'), async (req, res) => {
+router.put('/:id/close', auth, admin, async (req, res) => {
   try {
     const session = await ChatSession.findById(req.params.id);
     if (!session) {
