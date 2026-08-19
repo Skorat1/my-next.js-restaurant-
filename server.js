@@ -251,3 +251,5 @@ process.on('SIGTERM', () => {
 process.on('SIGINT', () => {
   server.close(() => process.exit(0));
 });
+
+module.exports = app;
