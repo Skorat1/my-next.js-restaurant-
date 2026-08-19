@@ -7033,3 +7033,7 @@
 {"level":"info","message":"🔌 WebSocket client disconnected: RgycNrEVVrJLWLqHAAAF","timestamp":"2026-08-17 18:01:09"}
 {"level":"info","message":"🔌 WebSocket client disconnected: 3PqEQwoYUU1t5S_kAAAE","timestamp":"2026-08-17 18:01:09"}
 {"level":"info","message":"🚀 Server running on port 5000","timestamp":"2026-08-17 18:04:33"}
+{"level":"info","message":"🚀 Server running on port 5000","timestamp":"2026-08-17 18:04:36"}
+{"ip":"::1","level":"debug","message":"OPTIONS /api/orders 204","timestamp":"2026-08-17 18:06:05"}
+{"ip":"::1","level":"debug","message":"POST /api/orders 201","timestamp":"2026-08-17 18:06:09"}
+{"ip":"::1","level":"debug","message":"GET /api/orders 200","timestamp":"2026-08-17 18:06:09"}
