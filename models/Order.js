@@ -57,6 +57,8 @@ const OrderSchema = new mongoose.Schema(
     razorpayPaymentId: { type: String, default: '' },
     paid:              { type: Boolean, default: false },
     paidAt:            { type: Date },
+    estimatedPrepTime: { type: Number, default: 15 }, // minutes
+    cancellationReason:{ type: String, default: '' },
   },
   { timestamps: true }
 );

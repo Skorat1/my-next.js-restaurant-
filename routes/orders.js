@@ -314,7 +314,7 @@ router.post('/', auth, async (req, res) => {
 // PATCH & PUT /api/orders/:id/status — admin: update order status
 const updateStatusHandler = async (req, res) => {
   try {
-    const { status } = req.body;
+    const { status, estimatedPrepTime, cancellationReason } = req.body;
     const valid = ['Pending', 'Confirmed', 'Preparing', 'Ready', 'Out for Delivery', 'Delivered', 'Cancelled'];
     if (!valid.includes(status)) return res.status(400).json({ msg: 'Invalid status value.' });
 
@@ -322,8 +322,16 @@ const updateStatusHandler = async (req, res) => {
     if (!order) return res.status(404).json({ msg: 'Order not found.' });
 
     order.status = status;
-    if (status === 'Preparing' && !order.prepStartTime) {
-      order.prepStartTime = new Date();
+    if (estimatedPrepTime !== undefined) {
+      order.estimatedPrepTime = Number(estimatedPrepTime);
+    }
+    if (cancellationReason !== undefined) {
+      order.cancellationReason = String(cancellationReason);
+    }
+    
+    if (status === 'Confirmed' || status === 'Preparing') {
+      if (!order.prepStartTime) order.pre
+      pStartTime = new Date();
     }
     if (['Ready', 'Out for Delivery', 'Delivered'].includes(status) && !order.prepEndTime) {
       order.prepEndTime = new Date();
