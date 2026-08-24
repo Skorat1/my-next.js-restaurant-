@@ -330,8 +330,7 @@ const updateStatusHandler = async (req, res) => {
     }
     
     if (status === 'Confirmed' || status === 'Preparing') {
-      if (!order.prepStartTime) order.pre
-      pStartTime = new Date();
+      if (!order.prepStartTime) order.prepStartTime = new Date();
     }
     if (['Ready', 'Out for Delivery', 'Delivered'].includes(status) && !order.prepEndTime) {
       order.prepEndTime = new Date();

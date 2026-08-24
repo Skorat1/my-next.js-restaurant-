@@ -7182,3 +7182,85 @@
 {"ip":"::1","level":"debug","message":"GET /api/admin/stats 304","timestamp":"2026-08-23 16:46:21"}
 {"ip":"::1","level":"debug","message":"OPTIONS /api/admin/stats 204","timestamp":"2026-08-23 16:47:21"}
 {"ip":"::1","level":"debug","message":"GET /api/admin/stats 304","timestamp":"2026-08-23 16:47:21"}
+{"level":"info","message":"🚀 Server running on port 5000","timestamp":"2026-08-23 16:48:14"}
+{"level":"info","message":"🔌 WebSocket client connected: -0BT2WTX73cRblvyAAAB","timestamp":"2026-08-23 16:48:18"}
+{"level":"info","message":"🔌 WebSocket client connected: 6wWOmucPnbfzxxSTAAAD","timestamp":"2026-08-23 16:48:19"}
+{"ip":"::1","level":"debug","message":"OPTIONS /api/admin/stats 204","timestamp":"2026-08-23 16:48:21"}
+{"ip":"::1","level":"debug","message":"GET /api/admin/stats 304","timestamp":"2026-08-23 16:48:22"}
+{"ip":"::1","level":"debug","message":"OPTIONS /api/admin/stats 204","timestamp":"2026-08-23 16:49:21"}
+{"ip":"::1","level":"debug","message":"GET /api/admin/stats 304","timestamp":"2026-08-23 16:49:21"}
+{"ip":"::1","level":"debug","message":"OPTIONS /api/admin/stats 204","timestamp":"2026-08-23 16:50:21"}
+{"ip":"::1","level":"debug","message":"GET /api/admin/stats 304","timestamp":"2026-08-23 16:50:21"}
+{"ip":"::1","level":"debug","message":"OPTIONS /api/admin/stats 204","timestamp":"2026-08-23 16:51:21"}
+{"ip":"::1","level":"debug","message":"GET /api/admin/stats 304","timestamp":"2026-08-23 16:51:21"}
+{"ip":"::1","level":"debug","message":"OPTIONS /api/admin/stats 204","timestamp":"2026-08-23 16:52:21"}
+{"ip":"::1","level":"debug","message":"GET /api/admin/stats 304","timestamp":"2026-08-23 16:52:21"}
+{"ip":"::1","level":"debug","message":"OPTIONS /api/admin/stats 204","timestamp":"2026-08-23 16:53:21"}
+{"ip":"::1","level":"debug","message":"GET /api/admin/stats 304","timestamp":"2026-08-23 16:53:21"}
+{"ip":"::1","level":"debug","message":"OPTIONS /api/admin/stats 204","timestamp":"2026-08-23 16:54:21"}
+{"ip":"::1","level":"debug","message":"GET /api/admin/stats 304","timestamp":"2026-08-23 16:54:21"}
+{"ip":"::1","level":"debug","message":"OPTIONS /api/admin/stats 204","timestamp":"2026-08-23 16:55:21"}
+{"ip":"::1","level":"debug","message":"GET /api/admin/stats 304","timestamp":"2026-08-23 16:55:21"}
+{"ip":"::1","level":"debug","message":"OPTIONS /api/admin/stats 204","timestamp":"2026-08-23 16:56:21"}
+{"ip":"::1","level":"debug","message":"GET /api/admin/stats 304","timestamp":"2026-08-23 16:56:21"}
+{"ip":"::1","level":"debug","message":"OPTIONS /api/admin/stats 204","timestamp":"2026-08-23 16:57:21"}
+{"ip":"::1","level":"debug","message":"GET /api/admin/stats 304","timestamp":"2026-08-23 16:57:21"}
+{"ip":"::1","level":"debug","message":"OPTIONS /api/admin/stats 204","timestamp":"2026-08-23 16:58:21"}
+{"ip":"::1","level":"debug","message":"GET /api/admin/stats 304","timestamp":"2026-08-23 16:58:21"}
+{"ip":"::1","level":"debug","message":"OPTIONS /api/admin/stats 204","timestamp":"2026-08-23 16:59:21"}
+{"ip":"::1","level":"debug","message":"GET /api/admin/stats 304","timestamp":"2026-08-23 16:59:21"}
+{"ip":"::1","level":"debug","message":"OPTIONS /api/admin/stats 204","timestamp":"2026-08-23 17:00:21"}
+{"ip":"::1","level":"debug","message":"GET /api/admin/stats 304","timestamp":"2026-08-23 17:00:21"}
+{"ip":"::1","level":"debug","message":"OPTIONS /api/admin/stats 204","timestamp":"2026-08-23 17:01:21"}
+{"ip":"::1","level":"debug","message":"GET /api/admin/stats 304","timestamp":"2026-08-23 17:01:21"}
+{"ip":"::1","level":"debug","message":"OPTIONS /api/admin/stats 204","timestamp":"2026-08-23 17:02:21"}
+{"ip":"::1","level":"debug","message":"GET /api/admin/stats 304","timestamp":"2026-08-23 17:02:21"}
+{"ip":"::1","level":"debug","message":"OPTIONS /api/admin/stats 204","timestamp":"2026-08-23 17:03:21"}
+{"ip":"::1","level":"debug","message":"GET /api/admin/stats 304","timestamp":"2026-08-23 17:03:21"}
+{"ip":"::1","level":"debug","message":"OPTIONS /api/admin/stats 204","timestamp":"2026-08-23 17:04:21"}
+{"ip":"::1","level":"debug","message":"GET /api/admin/stats 304","timestamp":"2026-08-23 17:04:21"}
+{"ip":"::1","level":"debug","message":"OPTIONS /api/admin/stats 204","timestamp":"2026-08-23 17:05:21"}
+{"ip":"::1","level":"debug","message":"GET /api/admin/stats 304","timestamp":"2026-08-23 17:05:21"}
+{"ip":"::1","level":"debug","message":"OPTIONS /api/admin/stats 204","timestamp":"2026-08-23 17:06:21"}
+{"ip":"::1","level":"debug","message":"GET /api/admin/stats 304","timestamp":"2026-08-23 17:06:21"}
+{"ip":"::1","level":"debug","message":"OPTIONS /api/admin/stats 204","timestamp":"2026-08-23 17:07:21"}
+{"ip":"::1","level":"debug","message":"GET /api/admin/stats 304","timestamp":"2026-08-23 17:07:21"}
+{"ip":"::1","level":"debug","message":"OPTIONS /api/admin/stats 204","timestamp":"2026-08-23 17:08:21"}
+{"ip":"::1","level":"debug","message":"GET /api/admin/stats 304","timestamp":"2026-08-23 17:08:21"}
+{"ip":"::1","level":"debug","message":"OPTIONS /api/admin/stats 204","timestamp":"2026-08-23 17:09:21"}
+{"ip":"::1","level":"debug","message":"GET /api/admin/stats 304","timestamp":"2026-08-23 17:09:21"}
+{"ip":"::1","level":"debug","message":"OPTIONS /api/admin/stats 204","timestamp":"2026-08-23 17:10:21"}
+{"ip":"::1","level":"debug","message":"GET /api/admin/stats 304","timestamp":"2026-08-23 17:10:21"}
+{"ip":"::1","level":"debug","message":"OPTIONS /api/admin/stats 204","timestamp":"2026-08-23 17:11:21"}
+{"ip":"::1","level":"debug","message":"GET /api/admin/stats 304","timestamp":"2026-08-23 17:11:21"}
+{"ip":"::1","level":"debug","message":"OPTIONS /api/admin/stats 204","timestamp":"2026-08-23 17:12:21"}
+{"ip":"::1","level":"debug","message":"GET /api/admin/stats 304","timestamp":"2026-08-23 17:12:21"}
+{"ip":"::1","level":"debug","message":"OPTIONS /api/admin/stats 204","timestamp":"2026-08-23 17:13:21"}
+{"ip":"::1","level":"debug","message":"GET /api/admin/stats 304","timestamp":"2026-08-23 17:13:21"}
+{"ip":"::1","level":"debug","message":"OPTIONS /api/admin/stats 204","timestamp":"2026-08-23 17:14:21"}
+{"ip":"::1","level":"debug","message":"GET /api/admin/stats 304","timestamp":"2026-08-23 17:14:21"}
+{"ip":"::1","level":"debug","message":"OPTIONS /api/admin/stats 204","timestamp":"2026-08-23 17:15:21"}
+{"ip":"::1","level":"debug","message":"GET /api/admin/stats 304","timestamp":"2026-08-23 17:15:21"}
+{"ip":"::1","level":"debug","message":"OPTIONS /api/admin/stats 204","timestamp":"2026-08-23 17:16:21"}
+{"ip":"::1","level":"debug","message":"GET /api/admin/stats 304","timestamp":"2026-08-23 17:16:21"}
+{"ip":"::1","level":"debug","message":"OPTIONS /api/admin/stats 204","timestamp":"2026-08-23 17:17:21"}
+{"ip":"::1","level":"debug","message":"GET /api/admin/stats 304","timestamp":"2026-08-23 17:17:21"}
+{"level":"info","message":"🚀 Server running on port 5000","timestamp":"2026-08-23 17:17:50"}
+{"level":"info","message":"🔌 WebSocket client connected: 8nmKV0WqL852-ETBAAAB","timestamp":"2026-08-23 17:17:51"}
+{"level":"info","message":"🔌 WebSocket client connected: GQ8xsOPK6nXLO1x-AAAD","timestamp":"2026-08-23 17:17:51"}
+{"ip":"::1","level":"debug","message":"OPTIONS /api/admin/stats 204","timestamp":"2026-08-23 17:18:21"}
+{"ip":"::1","level":"debug","message":"GET /api/admin/stats 304","timestamp":"2026-08-23 17:18:22"}
+{"ip":"::1","level":"debug","message":"OPTIONS /api/admin/stats 204","timestamp":"2026-08-23 17:18:46"}
+{"ip":"::1","level":"debug","message":"GET /api/admin/stats 304","timestamp":"2026-08-23 17:18:47"}
+{"level":"info","message":"🔌 WebSocket client disconnected: 8nmKV0WqL852-ETBAAAB","timestamp":"2026-08-23 17:18:49"}
+{"level":"info","message":"🔌 WebSocket client disconnected: GQ8xsOPK6nXLO1x-AAAD","timestamp":"2026-08-23 17:18:49"}
+{"ip":"::1","level":"debug","message":"OPTIONS /api/auth/me 204","timestamp":"2026-08-23 17:18:52"}
+{"ip":"::1","level":"debug","message":"GET /api/auth/me 304","timestamp":"2026-08-23 17:18:52"}
+{"ip":"::1","level":"debug","message":"GET /api/auth/me 304","timestamp":"2026-08-23 17:18:54"}
+{"ip":"::1","level":"debug","message":"OPTIONS /api/auth/me 204","timestamp":"2026-08-23 17:19:04"}
+{"ip":"::1","level":"debug","message":"GET /api/auth/me 304","timestamp":"2026-08-23 17:19:04"}
+{"ip":"::1","level":"debug","message":"GET /api/auth/me 304","timestamp":"2026-08-23 17:19:06"}
+{"ip":"::1","level":"debug","message":"OPTIONS /api/auth/me 204","timestamp":"2026-08-23 17:23:48"}
+{"ip":"::1","level":"debug","message":"GET /api/auth/me 304","timestamp":"2026-08-23 17:23:48"}
+{"ip":"::1","level":"debug","message":"OPTIONS /api/auth/me 204","timestamp":"2026-08-23 17:26:55"}
+{"ip":"::1","level":"debug","message":"GET /api/auth/me 304","timestamp":"2026-08-23 17:26:55"}
