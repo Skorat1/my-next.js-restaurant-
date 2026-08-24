@@ -47,11 +47,11 @@ router.put('/:id/close', auth, admin, async (req, res) => {
     session.status = 'closed';
     await session.save();
     
-    // Emit event to update clients
-    const io = req.app.get('io');
-    if (io) {
-      io.to(req.params.id).emit('chat_closed', { sessionId: session._id });
-      io.emit('active_chats_updated'); // Tell admin dashboard to refresh list
+    // Optional: emit socket event so admin dashboard can update immediately
+    const wsHelpers = req.app.get('wsHelpers');
+    if (wsHelpers) {
+      wsHelpers.emitToRoom(req.params.id, 'chat_closed', { sessionId: session._id });
+      wsHelpers.emitGlobally('active_chats_updated');
     }
 
     res.json(session);
