@@ -7264,3 +7264,4 @@
 {"ip":"::1","level":"debug","message":"GET /api/auth/me 304","timestamp":"2026-08-23 17:23:48"}
 {"ip":"::1","level":"debug","message":"OPTIONS /api/auth/me 204","timestamp":"2026-08-23 17:26:55"}
 {"ip":"::1","level":"debug","message":"GET /api/auth/me 304","timestamp":"2026-08-23 17:26:55"}
+{"level":"info","message":"🚀 Server running on port 5000","timestamp":"2026-08-31 10:25:16"}
