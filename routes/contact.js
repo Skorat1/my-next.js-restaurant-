@@ -24,6 +24,13 @@ function brandedEmail(title, bodyHtml) {
 router.post('/', async (req, res) => {
   try {
     const data = req.body;
+    if (!data.name || !data.email || !data.message) {
+      return res.status(400).json({
+        success: false,
+        msg: 'Name, email, and inquiry message are required.'
+      });
+    }
+
     if (!data.referenceCode) {
       data.referenceCode = `INQ-${Math.floor(100000 + Math.random() * 900000)}`;
     }
@@ -36,7 +43,11 @@ router.post('/', async (req, res) => {
       inquiry: newMessage
     });
   } catch (err) {
-    res.status(500).send('Server Error');
+    console.error('Error saving contact inquiry:', err);
+    res.status(500).json({
+      success: false,
+      msg: err.message || 'Server error while submitting inquiry'
+    });
   }
 });
 

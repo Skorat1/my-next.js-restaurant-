@@ -101,6 +101,13 @@ router.post('/', async (req, res) => {
       promoCode, discountAmount, totalAmount, specialRequests, isWaitlist
     } = req.body;
 
+    if (!name || !email || !phone) {
+      return res.status(400).json({
+        success: false,
+        msg: 'Name, email, and phone number are required to make a reservation.',
+      });
+    }
+
     let parsedDate;
     if (date) {
       const match = String(date).match(/^(\d{4}-\d{2}-\d{2})[T\s](\d+):(\d+)\s*(AM|PM)?/i);
