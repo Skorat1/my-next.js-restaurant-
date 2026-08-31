@@ -316,7 +316,7 @@ router.get('/verify/:token', async (req, res) => {
 // Get all reservations (Admin)
 router.get('/all', [auth, admin], async (req, res) => {
   try {
-    const { date, status, search, all } = req.query;
+    const { date, status, search } = req.query;
     const query = {};
 
     if (status && status !== 'All') {
@@ -332,15 +332,6 @@ router.get('/all', [auth, admin], async (req, res) => {
         endOfDay.setHours(23, 59, 59, 999);
         query.date = { $gte: startOfDay, $lte: endOfDay };
       }
-    } else if (!all && !status && !search && !date) {
-      // Default: show today and upcoming or recent
-      const todayStart = new Date();
-      todayStart.setHours(0, 0, 0, 0);
-      // Let's include today and upcoming + recent pending
-      query.$or = [
-        { date: { $gte: todayStart } },
-        { status: { $in: ['Pending', 'Waitlisted'] } }
-      ];
     }
 
     if (search && search.trim()) {
@@ -351,16 +342,12 @@ router.get('/all', [auth, admin], async (req, res) => {
         { email: { $regex: new RegExp(s, 'i') } },
         { passCode: { $regex: new RegExp(s, 'i') } },
         { tableNo: { $regex: new RegExp(s, 'i') } },
+        { area: { $regex: new RegExp(s, 'i') } },
       ];
-      if (query.$or) {
-        query.$and = [{ $or: query.$or }, { $or: searchConditions }];
-        delete query.$or;
-      } else {
-        query.$or = searchConditions;
-      }
+      query.$or = searchConditions;
     }
 
-    const reservations = await Reservation.find(query).sort({ date: -1, createdAt: -1 });
+    const reservations = await Reservation.find(query).sort({ createdAt: -1, date: -1 });
     res.json(reservations);
   } catch (err) {
     console.error('Error fetching reservations:', err);
