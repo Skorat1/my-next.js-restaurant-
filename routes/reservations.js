@@ -202,6 +202,44 @@ router.post('/', async (req, res) => {
   }
 });
 
+// @route   GET /api/reservations/my
+// @desc    Get customer's reservations
+// @access  Public with email or Private with JWT
+router.get('/my', async (req, res) => {
+  try {
+    let email = req.query.email;
+
+    const authHeader = req.header('Authorization');
+    if (authHeader) {
+      try {
+        const token = authHeader.replace('Bearer ', '');
+        const jwt = require('jsonwebtoken');
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'supersecretkey123');
+        if (decoded && decoded.email) {
+          email = decoded.email;
+        } else if (decoded && decoded.user && decoded.user.email) {
+          email = decoded.user.email;
+        }
+      } catch (jwtErr) {
+        // fallback to query email
+      }
+    }
+
+    if (!email || !email.trim()) {
+      return res.status(400).json({ success: false, msg: 'Email is required to fetch reservations.' });
+    }
+
+    const reservations = await Reservation.find({
+      email: { $regex: new RegExp(`^${email.trim()}$`, 'i') }
+    }).sort({ date: -1, createdAt: -1 });
+
+    return res.json({ success: true, data: reservations });
+  } catch (err) {
+    console.error('Error fetching customer reservations:', err);
+    return res.status(500).json({ success: false, msg: 'Server error fetching reservations' });
+  }
+});
+
 // Verify reservation by token
 router.get('/verify/:token', async (req, res) => {
   try {
