@@ -45,11 +45,18 @@ router.get('/business', cache(300), async (req, res) => {
         $group: {
           _id: '$items.name',
           quantitySold: { $sum: '$items.quantity' },
-          revenueGenerated: { $sum: '$items.lineTotal' },
+          revenueGenerated: {
+            $sum: {
+              $ifNull: [
+                '$items.lineTotal',
+                { $multiply: ['$items.price', '$items.quantity'] }
+              ]
+            }
+          },
         },
       },
       { $sort: { quantitySold: -1 } },
-      { $limit: 5 },
+      { $limit: 10 },
     ]);
 
     // 3. Peak Hours (hour of day)

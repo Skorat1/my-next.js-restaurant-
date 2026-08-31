@@ -9,11 +9,20 @@ module.exports = async function (req, res, next) {
 
   const token = authHeader.split(' ')[1];
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = await User.findById(decoded.id).select('-password');
-    if (!req.user) return res.status(401).json({ msg: 'User not found' });
+    const jwtSecret = process.env.JWT_SECRET || 'velora_fine_dining_ultra_secret_key_2026';
+    const decoded = jwt.verify(token, jwtSecret);
+    const userId = decoded.id || decoded._id || decoded.userId;
+    
+    if (!userId) {
+      return res.status(401).json({ msg: 'Token payload invalid' });
+    }
+
+    req.user = await User.findById(userId).select('-password');
+    if (!req.user) {
+      return res.status(401).json({ msg: 'User session expired or not found' });
+    }
     next();
   } catch (err) {
-    res.status(401).json({ msg: 'Token is not valid' });
+    return res.status(401).json({ msg: 'Token is not valid or expired' });
   }
 };
