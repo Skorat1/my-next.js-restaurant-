@@ -18,20 +18,12 @@ function sanitize(value) {
 }
 
 module.exports = function sanitizeInput(req, res, next) {
-  if (req.body) req.body = sanitize(req.body);
-
-  // Express 5: req.query is getter-only, mutate properties in-place
-  if (req.query) {
-    for (const key of Object.keys(req.query)) {
-      req.query[key] = sanitize(req.query[key]);
+  try {
+    if (req.body && typeof req.body === 'object') {
+      req.body = sanitize(req.body);
     }
+  } catch (err) {
+    // Prevent unhandled exceptions from breaking request pipeline
   }
-
-  if (req.params) {
-    for (const key of Object.keys(req.params)) {
-      req.params[key] = sanitize(req.params[key]);
-    }
-  }
-
   next();
 };
