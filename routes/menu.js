@@ -25,14 +25,14 @@ function parseBody(req) {
   if (src.description !== undefined) body.description = String(src.description).trim();
   if (src.price !== undefined) body.price = Number(src.price);
   if (src.category !== undefined) body.category = String(src.category).trim();
-  
+
   if (src.available !== undefined) body.available = src.available === true || src.available === 'true';
   if (src.premium !== undefined) body.premium = src.premium === true || src.premium === 'true';
   if (src.vegetarian !== undefined) body.vegetarian = src.vegetarian === true || src.vegetarian === 'true';
   if (src.spicy !== undefined) body.spicy = src.spicy === true || src.spicy === 'true';
   if (src.popular !== undefined) body.popular = src.popular === true || src.popular === 'true';
   if (src.isSpecial !== undefined) body.isSpecial = src.isSpecial === true || src.isSpecial === 'true';
-  
+
   if (src.station !== undefined) body.station = src.station;
   if (src.estimatedPrepTime !== undefined) body.estimatedPrepTime = Number(src.estimatedPrepTime) || 15;
 
@@ -60,7 +60,7 @@ function parseBody(req) {
     }
   }
 
-  // Handle image upload from buffer or string URL
+  // Handle  upload from buffer or string URL
   if (req.file) {
     const mime = req.file.mimetype || 'image/jpeg';
     const base64 = req.file.buffer.toString('base64');

@@ -53,7 +53,7 @@ const DEFAULT_MEDIA = [
     type: "video",
     category: "Chef Series",
     videoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
-    thumbnail: "https://images.unsplash.com/photo-1500937386664-56d1dfef3854?auto=format&fit=crop&w=1200&q=80",
+    thumbnail: "https://.com/photo-1500937386664-56d1dfef3854?auto=format&fit=crop&w=1200&q=80",
     duration: "18:40",
     views: 11300,
     likes: 980,
