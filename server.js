@@ -13,14 +13,18 @@ const app = express();
 
 // Ensure DB is connected for serverless function invocations
 app.use(async (req, res, next) => {
-  await connectDB();
+  try {
+    await connectDB();
+  } catch (dbErr) {
+    console.error('DB Connection error in middleware:', dbErr);
+  }
   next();
 });
 
 // ── Security headers
 app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' },
-  contentSecurityPolicy: false, // handled by Next.js
+  contentSecurityPolicy: false,
 }));
 
 // ── GZIP compression
@@ -66,12 +70,11 @@ app.use(cors({
 }));
 app.options('*', cors());
 
-
 // ── Body parsers
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// ── NoSQL injection prevention — body only (Express 5: req.query is read-only)
+// ── NoSQL injection prevention
 app.use((req, _res, next) => {
   if (req.body) req.body = mongoSanitize.sanitize(req.body, { allowDots: true });
   next();
@@ -90,7 +93,7 @@ app.use('/admin', express.static(path.join(__dirname, 'uploads'), {
   etag: true,
 }));
 
-// ── Global rate limiter (5000 req / 15 min per IP in dev)
+// ── Global rate limiter
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: process.env.NODE_ENV === 'production' ? 1000 : 5000,
@@ -100,7 +103,7 @@ const globalLimiter = rateLimit({
 });
 app.use('/api/', globalLimiter);
 
-// ── Strict rate limiter for auth routes (20 req / 15 min)
+// ── Strict rate limiter for auth routes
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 20,
@@ -159,163 +162,115 @@ app.use((err, req, res, _next) => {
   res.status(err.status || 500).json({ msg: err.message || 'Internal server error' });
 });
 
-// ── HTTP & WebSocket & Socket.io server
-const http = require('http');
-const { WebSocketServer } = require('ws');
-const { Server } = require('socket.io');
+// ── HTTP & WebSocket & Socket.io server (Only in long-running Node.js process)
+const isServerless = !!process.env.VERCEL;
 
-const server = http.createServer(app);
-const io = new Server(server, {
-  cors: {
-    origin: allowedOrigins,
-    credentials: true,
-  },
-});
-app.set('io', io);
+let emitToRoom = (room, event, data) => {};
+let emitGlobally = (event, data) => {};
 
-io.on('connection', (socket) => {
-  logger.info(`🔌 Socket.io client connected: ${socket.id}`);
-  socket.on('join_order', (orderId) => {
-    socket.join(`order_${orderId}`);
-  });
-});
+if (!isServerless) {
+  try {
+    const http = require('http');
+    const { WebSocketServer } = require('ws');
+    const { Server } = require('socket.io');
 
-const wss = new WebSocketServer({ server });
-
-app.set('wss', wss);
-
-// Manual room and global event management
-const rooms = new Map(); // sessionId -> Set of ws clients
-
-const joinRoom = (ws, room) => {
-  if (!rooms.has(room)) {
-    rooms.set(room, new Set());
-  }
-  rooms.get(room).add(ws);
-  if (!ws.rooms) ws.rooms = new Set();
-  ws.rooms.add(room);
-};
-
-const emitToRoom = (room, event, data) => {
-  if (rooms.has(room)) {
-    const message = JSON.stringify({ event, data });
-    rooms.get(room).forEach(client => {
-      if (client.readyState === 1 /* OPEN */) {
-        client.send(message);
-      }
+    const server = http.createServer(app);
+    const io = new Server(server, {
+      cors: {
+        origin: allowedOrigins,
+        credentials: true,
+      },
     });
-  }
-};
+    app.set('io', io);
 
-const emitGlobally = (event, data) => {
-  const message = JSON.stringify({ event, data });
-  wss.clients.forEach(client => {
-    if (client.readyState === 1 /* OPEN */) {
-      client.send(message);
-    }
-  });
-};
+    io.on('connection', (socket) => {
+      logger.info(`🔌 Socket.io client connected: ${socket.id}`);
+      socket.on('join_order', (orderId) => {
+        socket.join(`order_${orderId}`);
+      });
+    });
 
-app.set('wsHelpers', { emitToRoom, emitGlobally });
+    const wss = new WebSocketServer({ server });
+    app.set('wss', wss);
 
-wss.on('connection', (ws) => {
-  logger.info(`🔌 Native WebSocket client connected`);
+    const rooms = new Map();
 
-  ws.on('message', async (messageBuffer) => {
-    try {
-      const parsed = JSON.parse(messageBuffer.toString());
-      const { event, data } = parsed;
-
-      if (event === 'join_order') {
-        joinRoom(ws, `order_${data}`);
-        logger.debug(`Socket joined room order_${data}`);
+    const joinRoom = (ws, room) => {
+      if (!rooms.has(room)) {
+        rooms.set(room, new Set());
       }
-      
-      // Customer initiates or joins a chat session
-      else if (event === 'join_support') {
-        const { sessionId, customerName } = data;
-        joinRoom(ws, sessionId);
-        logger.debug(`Socket joined chat session ${sessionId}`);
-        
-        try {
-          const ChatSession = require('./models/ChatSession');
-          let session = await ChatSession.findById(sessionId);
-          if (!session) {
-            session = new ChatSession({
-              _id: sessionId,
-              customerName: customerName || 'Guest',
-              messages: [{ sender: 'admin', text: `Welcome ${customerName || 'Guest'}! How can we help you today?` }]
-            });
-            await session.save();
-            emitToRoom(sessionId, 'support_message', session.messages[0]);
-            emitGlobally('active_chats_updated');
+      rooms.get(room).add(ws);
+      if (!ws.rooms) ws.rooms = new Set();
+      ws.rooms.add(room);
+    };
+
+    emitToRoom = (room, event, data) => {
+      if (rooms.has(room)) {
+        const message = JSON.stringify({ event, data });
+        rooms.get(room).forEach(client => {
+          if (client.readyState === 1 /* OPEN */) {
+            client.send(message);
           }
-        } catch (err) {
-          logger.error('Error in join_support', err);
-        }
+        });
       }
-      
-      // Customer or Admin sends a message
-      else if (event === 'send_support_message') {
-        const { sessionId, sender, text } = data;
-        try {
-          const ChatSession = require('./models/ChatSession');
-          const session = await ChatSession.findById(sessionId);
-          if (session && session.status === 'open') {
-            const newMessage = { sender, text };
-            session.messages.push(newMessage);
-            await session.save();
-            
-            emitToRoom(sessionId, 'support_message', session.messages[session.messages.length - 1]);
-            
-            if (sender === 'customer') {
-              emitGlobally('active_chats_updated');
-            }
-          }
-        } catch (err) {
-          logger.error('Error in send_support_message', err);
-        }
-      }
-      
-      // Admin joins a specific chat session room
-      else if (event === 'admin_join_support') {
-        joinRoom(ws, data);
-        logger.debug(`Admin joined chat session ${data}`);
-      }
+    };
 
-    } catch (err) {
-      logger.error('WebSocket message parse error', err);
-    }
-  });
-
-  ws.on('close', () => {
-    logger.info(`🔌 Native WebSocket client disconnected`);
-    if (ws.rooms) {
-      ws.rooms.forEach(room => {
-        if (rooms.has(room)) {
-          rooms.get(room).delete(ws);
-          if (rooms.get(room).size === 0) {
-            rooms.delete(room);
-          }
+    emitGlobally = (event, data) => {
+      const message = JSON.stringify({ event, data });
+      wss.clients.forEach(client => {
+        if (client.readyState === 1 /* OPEN */) {
+          client.send(message);
         }
       });
-    }
-  });
-});
+    };
 
-// ── Start server
-if (!process.env.VERCEL) {
-  const PORT = process.env.PORT || 5000;
-  server.listen(PORT, () => logger.info(`🚀 Server running on port ${PORT}`));
+    wss.on('connection', (ws) => {
+      logger.info(`🔌 Native WebSocket client connected`);
+
+      ws.on('message', async (messageBuffer) => {
+        try {
+          const parsed = JSON.parse(messageBuffer.toString());
+          const { event, data } = parsed;
+
+          if (event === 'join_order') {
+            joinRoom(ws, `order_${data}`);
+          } else if (event === 'admin_join_support') {
+            joinRoom(ws, data);
+          }
+        } catch (err) {
+          logger.error('WebSocket message parse error', err);
+        }
+      });
+
+      ws.on('close', () => {
+        if (ws.rooms) {
+          ws.rooms.forEach(room => {
+            if (rooms.has(room)) {
+              rooms.get(room).delete(ws);
+              if (rooms.get(room).size === 0) {
+                rooms.delete(room);
+              }
+            }
+          });
+        }
+      });
+    });
+
+    const PORT = process.env.PORT || 5000;
+    server.listen(PORT, () => logger.info(`🚀 Server running on port ${PORT}`));
+
+    process.on('SIGTERM', () => {
+      logger.info('SIGTERM received, shutting down gracefully...');
+      server.close(() => process.exit(0));
+    });
+    process.on('SIGINT', () => {
+      server.close(() => process.exit(0));
+    });
+  } catch (serverErr) {
+    logger.error('Failed to start standalone socket server:', serverErr);
+  }
 }
 
-// ── Graceful shutdown
-process.on('SIGTERM', () => {
-  logger.info('SIGTERM received, shutting down gracefully...');
-  server.close(() => process.exit(0));
-});
-process.on('SIGINT', () => {
-  server.close(() => process.exit(0));
-});
+app.set('wsHelpers', { emitToRoom, emitGlobally });
 
 module.exports = app;
