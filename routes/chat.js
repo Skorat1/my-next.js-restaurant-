@@ -52,13 +52,24 @@ router.post('/message', async (req, res) => {
       status: 'active',
       updatedAt: new Date(),
     };
+
+    const setOnInsertPayload = {
+      sessionId,
+      createdAt: new Date(),
+    };
+
     if (customerName && customerName.trim()) {
       updatePayload.customerName = customerName.trim();
+    } else {
+      setOnInsertPayload.customerName = 'Guest Customer';
     }
 
     const updatedSession = await ChatSession.findOneAndUpdate(
       { sessionId },
-      { $set: updatePayload, $setOnInsert: { customerName: customerName ? customerName.trim() : 'Guest Customer' } },
+      { 
+        $set: updatePayload,
+        $setOnInsert: setOnInsertPayload
+      },
       { upsert: true, new: true }
     );
 
@@ -76,7 +87,7 @@ router.post('/message', async (req, res) => {
     });
   } catch (err) {
     console.error('Error storing chat message:', err);
-    return res.status(500).json({ success: false, msg: 'Server error while storing message' });
+    return res.status(500).json({ success: false, msg: 'Server error while storing message', error: err.message, stack: err.stack });
   }
 });
 
