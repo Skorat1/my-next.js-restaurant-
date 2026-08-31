@@ -11,12 +11,31 @@ require('dotenv').config();
 
 const app = express();
 
+// Trust proxy for Vercel / Cloudflare / Nginx
+app.set('trust proxy', 1);
+
+// ── Health check (Instant response, no DB required)
+app.get('/', (req, res) => {
+  res.json({ status: 'ok', message: 'Restaurant portal API is online.', timestamp: new Date().toISOString() });
+});
+
+app.get('/api/debug-env', (req, res) => {
+  res.json({
+    env: {
+      mongoUriConfigured: !!process.env.MONGO_URI,
+      hasJwtSecret: !!process.env.JWT_SECRET,
+      clientUrl: process.env.CLIENT_URL || 'not set',
+      nodeEnv: process.env.NODE_ENV || 'production'
+    }
+  });
+});
+
 // Ensure DB is connected for serverless function invocations
 app.use(async (req, res, next) => {
   try {
     await connectDB();
   } catch (dbErr) {
-    console.error('DB Connection error in middleware:', dbErr);
+    console.error('DB Connection error in middleware:', dbErr.message);
   }
   next();
 });
@@ -29,14 +48,6 @@ app.use(helmet({
 
 // ── GZIP compression
 app.use(compression());
-
-// ── HTTP request logging via Winston
-app.use((req, res, next) => {
-  res.on('finish', () => {
-    logger.debug(`${req.method} ${req.originalUrl} ${res.statusCode}`, { ip: req.ip });
-  });
-  next();
-});
 
 // ── CORS
 const defaultOrigins = [
@@ -75,10 +86,11 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // ── NoSQL injection prevention
-app.use((req, _res, next) => {
-  if (req.body) req.body = mongoSanitize.sanitize(req.body, { allowDots: true });
-  next();
-});
+try {
+  app.use(mongoSanitize({ allowDots: true }));
+} catch (e) {
+  // fallback if sanitize initialization fails
+}
 
 // ── Input sanitization (XSS prevention)
 app.use(require('./middleware/sanitize'));
@@ -93,24 +105,17 @@ app.use('/admin', express.static(path.join(__dirname, 'uploads'), {
   etag: true,
 }));
 
-// ── Global rate limiter
-const globalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: process.env.NODE_ENV === 'production' ? 1000 : 5000,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { msg: 'Too many requests, please try again later.' },
-});
-app.use('/api/', globalLimiter);
-
-// ── Strict rate limiter for auth routes
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 20,
-  message: { msg: 'Too many auth attempts, please try again later.' },
-});
-app.use('/api/auth/login', authLimiter);
-app.use('/api/auth/signup', authLimiter);
+// ── Rate limiter (lenient for serverless cold starts)
+if (!process.env.VERCEL) {
+  const globalLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 2000,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { msg: 'Too many requests, please try again later.' },
+  });
+  app.use('/api/', globalLimiter);
+}
 
 // ── Routes
 app.use('/api/auth', require('./routes/auth'));
@@ -133,23 +138,6 @@ app.use('/api/tables', require('./routes/tables'));
 app.use('/api/shifts', require('./routes/shifts'));
 app.use('/api/chat', require('./routes/chat'));
 
-// ── Health check
-app.get('/', (req, res) => {
-  res.json({ status: 'ok', message: 'Restaurant portal API is online.', timestamp: new Date().toISOString() });
-});
-
-// ── Debug env endpoint
-app.get('/api/debug-env', (req, res) => {
-  res.json({
-    env: {
-      mongoUriPrefix: process.env.MONGO_URI ? process.env.MONGO_URI.substring(0, 10) : 'none',
-      hasJwtSecret: !!process.env.JWT_SECRET,
-      clientUrl: process.env.CLIENT_URL || 'not set',
-      nodeEnv: process.env.NODE_ENV
-    }
-  });
-});
-
 // ── 404 handler
 app.use((req, res) => {
   res.status(404).json({ msg: 'Route not found' });
@@ -158,7 +146,7 @@ app.use((req, res) => {
 // ── Global error handler
 // eslint-disable-next-line no-unused-vars
 app.use((err, req, res, _next) => {
-  logger.error(err.message, { stack: err.stack, url: req.originalUrl });
+  logger.error(err.message || 'Internal Error', { stack: err.stack, url: req.originalUrl });
   res.status(err.status || 500).json({ msg: err.message || 'Internal server error' });
 });
 
