@@ -96,6 +96,51 @@ router.get('/kds/active', auth, admin, async (req, res) => {
   }
 });
 
+// GET /api/orders/my-orders & GET /api/orders/user — customer: get own orders
+router.get('/my-orders', auth, async (req, res) => {
+  try {
+    const userConditions = [{ user: req.user._id }];
+    if (req.user.email) {
+      userConditions.push({ 'customer.email': new RegExp(`^${req.user.email.trim()}$`, 'i') });
+    }
+    const orders = await Order.find({ $or: userConditions })
+      .sort({ createdAt: -1 })
+      .lean();
+    res.json(orders);
+  } catch (err) {
+    console.error('GET /api/orders/my-orders error:', err);
+    res.status(500).json({ msg: 'Server Error fetching your orders' });
+  }
+});
+
+router.get('/user', auth, async (req, res) => {
+  try {
+    const userConditions = [{ user: req.user._id }];
+    if (req.user.email) {
+      userConditions.push({ 'customer.email': new RegExp(`^${req.user.email.trim()}$`, 'i') });
+    }
+    const orders = await Order.find({ $or: userConditions })
+      .sort({ createdAt: -1 })
+      .lean();
+    res.json(orders);
+  } catch (err) {
+    console.error('GET /api/orders/user error:', err);
+    res.status(500).json({ msg: 'Server Error fetching your orders' });
+  }
+});
+
+// GET /api/orders/track/:orderNumber — live tracking by order number
+router.get('/track/:orderNumber', async (req, res) => {
+  try {
+    const order = await Order.findOne({ orderNumber: req.params.orderNumber }).lean();
+    if (!order) return res.status(404).json({ msg: 'Order not found' });
+    res.json(order);
+  } catch (err) {
+    console.error('GET /api/orders/track/:orderNumber error:', err);
+    res.status(500).json({ msg: 'Server Error tracking order' });
+  }
+});
+
 // GET /api/orders/:id — get a specific order (owner, matching email, or admin)
 router.get('/:id', auth, async (req, res) => {
   try {
