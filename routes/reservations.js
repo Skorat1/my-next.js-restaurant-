@@ -97,7 +97,7 @@ router.post('/', async (req, res) => {
   try {
     const {
       name, email, phone, date, guests, notes,
-      occasion, tableId, dietary, preOrders,
+      occasion, tableId, tableNo, area, dietary, preOrders,
       promoCode, discountAmount, totalAmount, specialRequests, isWaitlist
     } = req.body;
 
@@ -129,6 +129,8 @@ router.post('/', async (req, res) => {
     const verificationToken = crypto.randomBytes(32).toString('hex');
     const randomHex = crypto.randomBytes(3).toString('hex').toUpperCase();
     const passCode = `RES-${randomHex}`;
+    const assignedTable = tableNo || tableId || 'T1';
+    const assignedArea = area || 'Main Room';
 
     const reservation = new Reservation({
       passCode,
@@ -139,8 +141,9 @@ router.post('/', async (req, res) => {
       guests: parseInt(guests, 10) || 2,
       notes,
       occasion: occasion || 'General',
-      tableId: tableId || 'T1',
-      tableNo: tableId || 'T1',
+      tableId: assignedTable,
+      tableNo: assignedTable,
+      area: assignedArea,
       dietary: Array.isArray(dietary) ? dietary : [],
       preOrders: Array.isArray(preOrders) ? preOrders : [],
       promoCode,
@@ -151,6 +154,16 @@ router.post('/', async (req, res) => {
       verificationToken,
     });
     await reservation.save();
+
+    // Broadcast websocket notification
+    try {
+      const wsHelpers = req.app.get('wsHelpers');
+      if (wsHelpers) {
+        wsHelpers.emitGlobally('reservation_created', reservation);
+      }
+    } catch (wsErr) {
+      console.error('WS broadcast error on reservation_created:', wsErr);
+    }
 
     // Skip QR Code generation for now, it will be generated upon admin confirmation
     const qrDataUrl = null;
@@ -303,25 +316,92 @@ router.get('/verify/:token', async (req, res) => {
 // Get all reservations (Admin)
 router.get('/all', [auth, admin], async (req, res) => {
   try {
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
-    const reservations = await Reservation.find({ date: { $gte: todayStart } }).sort({ date: 1 });
+    const { date, status, search, all } = req.query;
+    const query = {};
+
+    if (status && status !== 'All') {
+      query.status = status;
+    }
+
+    if (date && date !== 'all') {
+      const targetDate = new Date(date);
+      if (!isNaN(targetDate.getTime())) {
+        const startOfDay = new Date(targetDate);
+        startOfDay.setHours(0, 0, 0, 0);
+        const endOfDay = new Date(targetDate);
+        endOfDay.setHours(23, 59, 59, 999);
+        query.date = { $gte: startOfDay, $lte: endOfDay };
+      }
+    } else if (!all && !status && !search && !date) {
+      // Default: show today and upcoming or recent
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      // Let's include today and upcoming + recent pending
+      query.$or = [
+        { date: { $gte: todayStart } },
+        { status: { $in: ['Pending', 'Waitlisted'] } }
+      ];
+    }
+
+    if (search && search.trim()) {
+      const s = search.trim();
+      const searchConditions = [
+        { name: { $regex: new RegExp(s, 'i') } },
+        { phone: { $regex: new RegExp(s, 'i') } },
+        { email: { $regex: new RegExp(s, 'i') } },
+        { passCode: { $regex: new RegExp(s, 'i') } },
+        { tableNo: { $regex: new RegExp(s, 'i') } },
+      ];
+      if (query.$or) {
+        query.$and = [{ $or: query.$or }, { $or: searchConditions }];
+        delete query.$or;
+      } else {
+        query.$or = searchConditions;
+      }
+    }
+
+    const reservations = await Reservation.find(query).sort({ date: -1, createdAt: -1 });
     res.json(reservations);
   } catch (err) {
+    console.error('Error fetching reservations:', err);
     res.status(500).json({ msg: 'Server error' });
   }
 });
 
-// Update reservation status (Admin)
+// Update reservation status & table assignment (Admin)
 router.put('/:id', [auth, admin], async (req, res) => {
   try {
-    const { status, notes, tableNo, area } = req.body;
+    const { status, notes, tableNo, area, guests, date, time, occasion } = req.body;
     const reservation = await Reservation.findById(req.params.id);
     if (!reservation) return res.status(404).json({ msg: 'Reservation not found' });
+
+    const previousStatus = reservation.status;
+    const previousTableNo = reservation.tableNo;
+
     if (status) reservation.status = status;
     if (notes !== undefined) reservation.notes = notes;
-    if (tableNo !== undefined) reservation.tableNo = tableNo;
+    if (tableNo !== undefined) {
+      reservation.tableNo = tableNo;
+      reservation.tableId = tableNo;
+    }
     if (area !== undefined) reservation.area = area;
+    if (guests !== undefined) reservation.guests = Number(guests);
+    if (occasion !== undefined) reservation.occasion = occasion;
+
+    if (date) {
+      const match = String(date).match(/^(\d{4}-\d{2}-\d{2})[T\s](\d+):(\d+)\s*(AM|PM)?/i);
+      if (match) {
+        let h = parseInt(match[2], 10);
+        const m = parseInt(match[3], 10);
+        const period = match[4] ? match[4].toUpperCase() : null;
+        if (period === 'PM' && h < 12) h += 12;
+        if (period === 'AM' && h === 12) h = 0;
+        reservation.date = new Date(`${match[1]}T${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:00`);
+      } else {
+        const d = new Date(date);
+        if (!isNaN(d.getTime())) reservation.date = d;
+      }
+    }
 
     if (!reservation.passCode) {
       const randomHex = crypto.randomBytes(3).toString('hex').toUpperCase();
@@ -329,6 +409,63 @@ router.put('/:id', [auth, admin], async (req, res) => {
     }
 
     await reservation.save();
+
+    // Synchronize Table model in database
+    try {
+      const Table = require('../models/Table');
+      const cleanNum = (str) => {
+        if (!str) return null;
+        const n = String(str).replace(/[^\d]/g, '');
+        return n ? parseInt(n, 10) : null;
+      };
+
+      const currentTblNum = cleanNum(reservation.tableNo);
+      const prevTblNum = cleanNum(previousTableNo);
+
+      // If table changed, release previous table
+      if (prevTblNum && prevTblNum !== currentTblNum) {
+        await Table.findOneAndUpdate(
+          { tableNumber: prevTblNum },
+          { status: 'Available' }
+        );
+      }
+
+      if (currentTblNum) {
+        if (status === 'Seated') {
+          await Table.findOneAndUpdate(
+            { tableNumber: currentTblNum },
+            { status: 'Occupied' }
+          );
+        } else if (status === 'Confirmed' || status === 'Reserved') {
+          await Table.findOneAndUpdate(
+            { tableNumber: currentTblNum },
+            { status: 'Reserved' }
+          );
+        } else if (status === 'Completed') {
+          await Table.findOneAndUpdate(
+            { tableNumber: currentTblNum },
+            { status: 'Cleaning' }
+          );
+        } else if (status === 'Declined') {
+          await Table.findOneAndUpdate(
+            { tableNumber: currentTblNum },
+            { status: 'Available' }
+          );
+        }
+      }
+    } catch (tblSyncErr) {
+      console.error('Error synchronizing Table status:', tblSyncErr);
+    }
+
+    // Broadcast websocket update
+    try {
+      const wsHelpers = req.app.get('wsHelpers');
+      if (wsHelpers) {
+        wsHelpers.emitGlobally('reservation_updated', reservation);
+      }
+    } catch (wsErr) {
+      console.error('WS broadcast error on reservation_updated:', wsErr);
+    }
 
     // Email user on status update with QR Pass
     if (status === 'Confirmed' || status === 'Declined') {
@@ -382,6 +519,7 @@ router.put('/:id', [auth, admin], async (req, res) => {
 
     res.json({ success: true, reservation });
   } catch (err) {
+    console.error('Error updating reservation:', err);
     res.status(500).json({ msg: 'Server error' });
   }
 });
@@ -389,7 +527,18 @@ router.put('/:id', [auth, admin], async (req, res) => {
 // Delete reservation (Admin)
 router.delete('/:id', [auth, admin], async (req, res) => {
   try {
-    await Reservation.findByIdAndDelete(req.params.id);
+    const reservation = await Reservation.findByIdAndDelete(req.params.id);
+    
+    // Broadcast websocket notification
+    try {
+      const wsHelpers = req.app.get('wsHelpers');
+      if (wsHelpers) {
+        wsHelpers.emitGlobally('reservation_deleted', { id: req.params.id });
+      }
+    } catch (wsErr) {
+      console.error('WS broadcast error on reservation_deleted:', wsErr);
+    }
+
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ msg: 'Server error' });

@@ -13,8 +13,13 @@ const TableSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['Available', 'Occupied', 'Reserved'],
+    enum: ['Available', 'Occupied', 'Reserved', 'Cleaning'],
     default: 'Available',
+  },
+  area: {
+    type: String,
+    enum: ['Main Room', 'Patio', 'Terrace', 'Lounge'],
+    default: 'Main Room',
   },
   currentOrderId: {
     type: mongoose.Schema.Types.ObjectId,
