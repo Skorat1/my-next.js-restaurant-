@@ -204,10 +204,12 @@ router.post('/', async (req, res) => {
 
 // @route   GET /api/reservations/my
 // @desc    Get customer's reservations
-// @access  Public with email or Private with JWT
+// @access  Public with email/phone or Private with JWT
 router.get('/my', async (req, res) => {
   try {
     let email = req.query.email;
+    let phone = req.query.phone;
+    let search = req.query.search;
 
     const authHeader = req.header('Authorization');
     if (authHeader) {
@@ -216,22 +218,37 @@ router.get('/my', async (req, res) => {
         const jwt = require('jsonwebtoken');
         const decoded = jwt.verify(token, process.env.JWT_SECRET || 'supersecretkey123');
         if (decoded && decoded.email) {
-          email = decoded.email;
+          email = email || decoded.email;
         } else if (decoded && decoded.user && decoded.user.email) {
-          email = decoded.user.email;
+          email = email || decoded.user.email;
         }
       } catch (jwtErr) {
-        // fallback to query email
+        // fallback to query parameters
       }
     }
 
-    if (!email || !email.trim()) {
-      return res.status(400).json({ success: false, msg: 'Email is required to fetch reservations.' });
+    const conditions = [];
+    if (email && email.trim()) {
+      conditions.push({ email: { $regex: new RegExp(`^${email.trim()}$`, 'i') } });
+    }
+    if (phone && phone.trim()) {
+      conditions.push({ phone: { $regex: new RegExp(phone.trim(), 'i') } });
+    }
+    if (search && search.trim()) {
+      const s = search.trim();
+      conditions.push(
+        { email: { $regex: new RegExp(s, 'i') } },
+        { phone: { $regex: new RegExp(s, 'i') } },
+        { name: { $regex: new RegExp(s, 'i') } },
+        { passCode: { $regex: new RegExp(s, 'i') } }
+      );
     }
 
-    const reservations = await Reservation.find({
-      email: { $regex: new RegExp(`^${email.trim()}$`, 'i') }
-    }).sort({ date: -1, createdAt: -1 });
+    if (conditions.length === 0) {
+      return res.status(400).json({ success: false, msg: 'Email, phone, or search query is required.' });
+    }
+
+    const reservations = await Reservation.find({ $or: conditions }).sort({ date: -1, createdAt: -1 });
 
     return res.json({ success: true, data: reservations });
   } catch (err) {
