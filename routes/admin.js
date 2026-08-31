@@ -393,15 +393,58 @@ router.delete('/newsletter/:id', async (req, res) => {
   }
 });
 
-// GET /api/admin/activity — User activity logs
+// GET /api/admin/activity — User and system activity logs with search and filters
 router.get('/activity', async (req, res) => {
   try {
-    const logs = await ActivityLog.find().sort({ createdAt: -1 }).limit(200);
+    const { action, role, search } = req.query;
+    const query = {};
+
+    if (action && action !== 'all') {
+      query.action = action;
+    }
+
+    if (role && role !== 'all') {
+      query.role = role;
+    }
+
+    if (search && search.trim()) {
+      const s = search.trim();
+      query.$or = [
+        { name: { $regex: new RegExp(s, 'i') } },
+        { email: { $regex: new RegExp(s, 'i') } },
+        { action: { $regex: new RegExp(s, 'i') } },
+        { ip: { $regex: new RegExp(s, 'i') } },
+        { details: { $regex: new RegExp(s, 'i') } },
+      ];
+    }
+
+    const logs = await ActivityLog.find(query).sort({ createdAt: -1 }).limit(300);
     res.json(logs);
   } catch (err) {
-    res.status(500).json({ msg: 'Server error' });
+    res.status(500).json({ msg: 'Server error fetching activity logs.' });
+  }
+});
+
+// DELETE /api/admin/activity/clear — Clear all activity logs
+router.delete('/activity/clear', async (req, res) => {
+  try {
+    await ActivityLog.deleteMany({});
+    res.json({ success: true, msg: 'Activity logs cleared successfully.' });
+  } catch (err) {
+    res.status(500).json({ msg: 'Server error clearing activity logs.' });
+  }
+});
+
+// DELETE /api/admin/activity/:id — Delete single log
+router.delete('/activity/:id', async (req, res) => {
+  try {
+    await ActivityLog.findByIdAndDelete(req.params.id);
+    res.json({ success: true, msg: 'Log entry deleted.' });
+  } catch (err) {
+    res.status(500).json({ msg: 'Server error deleting log entry.' });
   }
 });
 
 module.exports = router;
+
 
