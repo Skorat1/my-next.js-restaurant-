@@ -262,10 +262,124 @@ router.put('/users/:id/role', async (req, res) => {
 // GET /api/admin/newsletter — List subscribers
 router.get('/newsletter', async (req, res) => {
   try {
-    const subs = await Newsletter.find().sort({ subscribedAt: -1 });
+    const { search } = req.query;
+    const query = {};
+    if (search && search.trim()) {
+      const s = search.trim();
+      query.$or = [
+        { email: { $regex: new RegExp(s, 'i') } },
+        { name: { $regex: new RegExp(s, 'i') } },
+      ];
+    }
+    const subs = await Newsletter.find(query).sort({ subscribedAt: -1 });
     res.json(subs);
   } catch (err) {
     res.status(500).json({ msg: 'Server error' });
+  }
+});
+
+// POST /api/admin/newsletter — Add subscriber manually
+router.post('/newsletter', async (req, res) => {
+  try {
+    const { email, name } = req.body;
+    if (!email || !email.trim()) {
+      return res.status(400).json({ msg: 'Email is required' });
+    }
+    const cleanEmail = email.trim().toLowerCase();
+    const existing = await Newsletter.findOne({ email: cleanEmail });
+    if (existing) {
+      return res.status(400).json({ msg: 'This email is already subscribed.' });
+    }
+    const sub = new Newsletter({
+      email: cleanEmail,
+      name: name ? name.trim() : '',
+      subscribedAt: new Date(),
+    });
+    await sub.save();
+    res.status(201).json({ success: true, msg: 'Subscriber added successfully', sub });
+  } catch (err) {
+    res.status(500).json({ msg: 'Server error' });
+  }
+});
+
+// POST /api/admin/newsletter/broadcast — Send mass email campaign to subscribers
+router.post('/newsletter/broadcast', async (req, res) => {
+  try {
+    const { subject, heading, message, offerCode, ctaText, ctaLink } = req.body;
+
+    if (!subject || !message) {
+      return res.status(400).json({ msg: 'Subject and message body are required for the campaign.' });
+    }
+
+    const subscribers = await Newsletter.find();
+    if (subscribers.length === 0) {
+      return res.status(400).json({ msg: 'No subscribers found to send this campaign to.' });
+    }
+
+    const { sendEmail } = require('../config/email');
+    const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
+    let sentCount = 0;
+
+    // Send to subscribers
+    const emailPromises = subscribers.map(async (sub) => {
+      try {
+        const subName = sub.name || 'Valued Patron';
+        await sendEmail({
+          to: sub.email,
+          subject: subject,
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 540px; margin: 0 auto; background: #0a0a0a; border-radius: 20px; overflow: hidden; border: 1px solid #333; color: #fff; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+              <div style="background: linear-gradient(135deg, #1c1917, #0a0a0a); padding: 32px 24px; text-align: center; border-bottom: 1px solid #262626;">
+                <h1 style="color: #f59e0b; font-family: Georgia, serif; margin: 0; font-size: 28px; letter-spacing: 4px;">VELORA</h1>
+                <p style="color: #a3a3a3; margin: 6px 0 0; font-size: 10px; text-transform: uppercase; letter-spacing: 3px;">VIP Newsletter &amp; Private Offer</p>
+              </div>
+
+              <div style="padding: 32px 24px; text-align: center;">
+                <h2 style="color: #fff; font-size: 20px; margin: 0 0 12px;">${heading || subject}</h2>
+                <p style="color: #e5e5e5; font-size: 14px; margin: 0 0 20px;">Dear <strong>${subName}</strong>,</p>
+                
+                <p style="color: #d4d4d4; font-size: 14px; line-height: 1.7; margin: 0 0 24px; text-align: left; background: #141414; padding: 20px; border-radius: 12px; border: 1px solid #262626; white-space: pre-line;">
+${message}
+                </p>
+
+                ${offerCode ? `
+                <div style="background: rgba(245, 158, 11, 0.1); border: 2px dashed #f59e0b; border-radius: 14px; padding: 16px 24px; margin: 0 auto 24px; display: inline-block;">
+                  <p style="color: #a3a3a3; font-size: 10px; text-transform: uppercase; letter-spacing: 2px; margin: 0 0 4px;">Exclusive Offer Voucher</p>
+                  <p style="color: #f59e0b; font-family: monospace; font-size: 22px; font-weight: bold; margin: 0; letter-spacing: 4px;">${offerCode}</p>
+                </div>
+                ` : ''}
+
+                <div style="margin: 24px 0;">
+                  <a href="${ctaLink || `${baseUrl}/reserve`}" style="display: inline-block; background: #f59e0b; color: #000; text-decoration: none; padding: 14px 36px; border-radius: 999px; font-weight: bold; font-size: 12px; text-transform: uppercase; letter-spacing: 2px;">
+                    ${ctaText || 'Claim VIP Offer'}
+                  </a>
+                </div>
+              </div>
+
+              <div style="background: #171717; padding: 16px; text-align: center; border-top: 1px solid #262626;">
+                <p style="color: #737373; font-size: 11px; margin: 0;">© VELORA Fine Dining · Haute Gastronomy</p>
+              </div>
+            </div>
+          `,
+          text: `Hello ${subName},\n\n${message}\n\n${offerCode ? `Offer Code: ${offerCode}\n` : ''}Visit us: ${ctaLink || `${baseUrl}/reserve`}\n\n— VELORA`,
+        });
+        sentCount++;
+      } catch (err) {
+        console.error(`Failed to send campaign email to ${sub.email}:`, err);
+      }
+    });
+
+    await Promise.all(emailPromises);
+
+    res.json({
+      success: true,
+      msg: `Campaign broadcast dispatched to ${subscribers.length} subscribers!`,
+      totalSubscribers: subscribers.length,
+      sentCount,
+    });
+  } catch (err) {
+    console.error('Error broadcasting campaign:', err);
+    res.status(500).json({ msg: 'Server error broadcasting campaign.' });
   }
 });
 
@@ -273,7 +387,7 @@ router.get('/newsletter', async (req, res) => {
 router.delete('/newsletter/:id', async (req, res) => {
   try {
     await Newsletter.findByIdAndDelete(req.params.id);
-    res.json({ success: true });
+    res.json({ success: true, msg: 'Subscriber removed.' });
   } catch (err) {
     res.status(500).json({ msg: 'Server error' });
   }
