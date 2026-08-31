@@ -300,8 +300,10 @@ wss.on('connection', (ws) => {
 });
 
 // ── Start server
-const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => logger.info(`🚀 Server running on port ${PORT}`));
+if (!process.env.VERCEL) {
+  const PORT = process.env.PORT || 5000;
+  server.listen(PORT, () => logger.info(`🚀 Server running on port ${PORT}`));
+}
 
 // ── Graceful shutdown
 process.on('SIGTERM', () => {
