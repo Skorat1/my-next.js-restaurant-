@@ -9,6 +9,19 @@ const auth = require('../middleware/auth');
 const { sendEmail } = require('../config/email');
 const ActivityLog = require('../models/ActivityLog');
 
+// Helper to extract or generate unique device identifier
+function getDeviceId(req) {
+  if (req.body && req.body.deviceId && typeof req.body.deviceId === 'string' && req.body.deviceId.trim()) {
+    return req.body.deviceId.trim();
+  }
+  if (req.headers['x-device-id'] && typeof req.headers['x-device-id'] === 'string' && req.headers['x-device-id'].trim()) {
+    return req.headers['x-device-id'].trim();
+  }
+  const raw = `${req.ip || '127.0.0.1'}-${req.headers['user-agent'] || 'device'}`;
+  const hash = crypto.createHash('md5').update(raw).digest('hex').substring(0, 8).toUpperCase();
+  return `DEV-${hash}`;
+}
+
 // Build verification email link
 function buildVerifyUrl(token) {
   const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
@@ -114,7 +127,17 @@ router.post('/signup', async (req, res) => {
     await user.save();
 
     // Log signup activity
-    await ActivityLog.create({ user: user._id, name: user.name, email: user.email, role: user.role, action: 'signup', ip: req.ip, userAgent: req.headers['user-agent'] });
+    const deviceId = getDeviceId(req);
+    await ActivityLog.create({
+      user: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      action: 'signup',
+      deviceId,
+      ip: req.ip,
+      userAgent: req.headers['user-agent'],
+    });
 
     // Send verification email (falls back to console log in dev)
     try {
@@ -191,7 +214,17 @@ router.post('/login', async (req, res) => {
     }
 
     // Log login activity
-    await ActivityLog.create({ user: user._id, name: user.name, email: user.email, role: user.role, action: 'login', ip: req.ip, userAgent: req.headers['user-agent'] });
+    const deviceId = getDeviceId(req);
+    await ActivityLog.create({
+      user: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      action: 'login',
+      deviceId,
+      ip: req.ip,
+      userAgent: req.headers['user-agent'],
+    });
 
     res.json({
       token,
@@ -236,7 +269,17 @@ router.post('/logout', auth, async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
     if (user) {
-      await ActivityLog.create({ user: user._id, name: user.name, email: user.email, role: user.role, action: 'logout', ip: req.ip, userAgent: req.headers['user-agent'] });
+      const deviceId = getDeviceId(req);
+      await ActivityLog.create({
+        user: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        action: 'logout',
+        deviceId,
+        ip: req.ip,
+        userAgent: req.headers['user-agent'],
+      });
     }
     res.json({ success: true });
   } catch (err) {

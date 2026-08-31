@@ -413,6 +413,7 @@ router.get('/activity', async (req, res) => {
         { name: { $regex: new RegExp(s, 'i') } },
         { email: { $regex: new RegExp(s, 'i') } },
         { action: { $regex: new RegExp(s, 'i') } },
+        { deviceId: { $regex: new RegExp(s, 'i') } },
         { ip: { $regex: new RegExp(s, 'i') } },
         { details: { $regex: new RegExp(s, 'i') } },
       ];

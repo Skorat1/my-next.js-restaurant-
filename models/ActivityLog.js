@@ -7,6 +7,7 @@ const ActivityLogSchema = new mongoose.Schema({
   role: { type: String, default: 'customer' },
   action: { type: String, required: true },
   details: { type: String },
+  deviceId: { type: String },
   ip: { type: String },
   userAgent: { type: String },
 }, { timestamps: true });
