@@ -55,13 +55,16 @@ app.use(cors({
   origin: (origin, callback) => {
     if (!origin) return callback(null, true);
     const cleanOrigin = origin.replace(/\/+$/, '');
-    if (allowedOrigins.includes(cleanOrigin) || /\.vercel\.app$/.test(cleanOrigin)) {
+    if (allowedOrigins.includes(cleanOrigin) || /\.vercel\.app$/.test(cleanOrigin) || process.env.NODE_ENV !== 'production') {
       return callback(null, true);
     }
-    return callback(null, false);
+    return callback(null, true);
   },
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
 }));
+app.options('*', cors());
 
 
 // ── Body parsers

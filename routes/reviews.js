@@ -39,6 +39,17 @@ router.post('/', auth, async (req, res) => {
   }
 });
 
+// Get all approved reviews (Public)
+router.get('/', async (req, res) => {
+  try {
+    const reviews = await Review.find({ status: 'Approved' }).sort({ createdAt: -1 }).limit(50);
+    res.json(reviews);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ msg: 'Server error' });
+  }
+});
+
 // Get approved reviews for a menu item (Public)
 router.get('/item/:menuItemId', async (req, res) => {
   try {
