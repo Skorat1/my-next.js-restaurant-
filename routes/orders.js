@@ -167,8 +167,23 @@ router.get('/:id', auth, async (req, res) => {
   }
 });
 
-// POST /api/orders — place an order (requires login)
-router.post('/', auth, async (req, res) => {
+const optionalAuth = async (req, res, next) => {
+  const authHeader = req.header('Authorization');
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.split(' ')[1];
+    try {
+      const jwt = require('jsonwebtoken');
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      req.user = await User.findById(decoded.id).select('-password');
+    } catch (e) {
+      // ignore invalid token, proceed as guest
+    }
+  }
+  next();
+};
+
+// POST /api/orders — place an order (logged-in or guest)
+router.post('/', optionalAuth, async (req, res) => {
   try {
     const {
       items,
@@ -252,7 +267,15 @@ router.post('/', auth, async (req, res) => {
 
     // Loyalty points discount
     const POINTS_PER_PAISE = 0.01;
-    const pointsUsed = Math.min(Number(loyaltyPoints) || 0, req.user.loyaltyPoints || 0);
+    let pointsUsed = 0;
+    let targetUser = req.user;
+    if (!targetUser && customer.email) {
+      targetUser = await User.findOne({ email: new RegExp(`^${customer.email.trim()}$`, 'i') });
+    }
+
+    if (targetUser && targetUser.loyaltyPoints) {
+      pointsUsed = Math.min(Number(loyaltyPoints) || 0, targetUser.loyaltyPoints || 0);
+    }
     const loyaltyDiscount = Math.round(pointsUsed * POINTS_PER_PAISE * 100) / 100;
 
     const deliveryFee = computeDeliveryFee(customer.pincode);
@@ -260,9 +283,10 @@ router.post('/', auth, async (req, res) => {
     const tax = Math.round(taxable * TAX_RATE * 100) / 100;
     const total = Math.round((taxable + tax + deliveryFee) * 100) / 100;
 
+    const orderNumber = generateOrderNumber();
     const order = new Order({
-      orderNumber: generateOrderNumber(),
-      user: req.user._id,
+      orderNumber,
+      user: targetUser ? targetUser._id : undefined,
       items: detailedItems,
       customer,
       paymentMethod,
@@ -300,17 +324,30 @@ router.post('/', auth, async (req, res) => {
     }
 
     // Deduct loyalty points if used
-    if (pointsUsed > 0) {
-      await User.findByIdAndUpdate(req.user._id, { $inc: { loyaltyPoints: -pointsUsed } });
+    if (pointsUsed > 0 && targetUser) {
+      await User.findByIdAndUpdate(targetUser._id, { $inc: { loyaltyPoints: -pointsUsed } });
     }
 
     // Award loyalty points (1 point per $1 spent)
-    const earnedPoints = Math.floor(total);
-    await User.findByIdAndUpdate(req.user._id, { $inc: { loyaltyPoints: earnedPoints } });
+    if (targetUser) {
+      const earnedPoints = Math.floor(total);
+      await User.findByIdAndUpdate(targetUser._id, { $inc: { loyaltyPoints: earnedPoints } });
+    }
 
+    // Broadcast WebSocket & Socket.io events
     const io = req.app.get('io');
     if (io) {
       io.emit('new_order', order);
+      io.emit('order_created', order);
+    }
+
+    try {
+      const wsHelpers = req.app.get('wsHelpers');
+      if (wsHelpers) {
+        wsHelpers.emitGlobally('order_created', order);
+      }
+    } catch (wsErr) {
+      console.error('WebSocket helper broadcast error:', wsErr);
     }
 
     try {
