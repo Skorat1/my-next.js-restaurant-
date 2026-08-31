@@ -1,39 +1,24 @@
 const mongoose = require('mongoose');
 
-const MessageSchema = new mongoose.Schema({
-  sender: {
-    type: String,
-    enum: ['customer', 'admin'],
-    required: true,
-  },
-  text: {
-    type: String,
-    required: true,
-  },
-  timestamp: {
-    type: Date,
-    default: Date.now,
-  },
-});
-
 const ChatSessionSchema = new mongoose.Schema({
-  _id: {
+  sessionId: {
     type: String,
     required: true,
+    unique: true,
+    index: true,
   },
   customerName: {
     type: String,
-    required: true,
+    default: 'Guest Customer',
   },
   status: {
     type: String,
-    enum: ['open', 'closed'],
-    default: 'open',
+    enum: ['active', 'closed'],
+    default: 'active',
   },
-  messages: [MessageSchema],
-  createdAt: {
-    type: Date,
-    default: Date.now,
+  lastMessage: {
+    type: String,
+    default: '',
   },
   updatedAt: {
     type: Date,
@@ -41,10 +26,4 @@ const ChatSessionSchema = new mongoose.Schema({
   },
 });
 
-// Update the updatedAt timestamp before saving
-ChatSessionSchema.pre('save', function (next) {
-  this.updatedAt = Date.now();
-  next();
-});
-
-module.exports = mongoose.model('ChatSession', ChatSessionSchema);
+module.exports = mongoose.models.ChatSession || mongoose.model('ChatSession', ChatSessionSchema);

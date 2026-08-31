@@ -1,178 +1,158 @@
 const express = require('express');
 const router = express.Router();
 const ChatSession = require('../models/ChatSession');
-const auth = require('../middleware/auth');
-const admin = require('../middleware/admin');
+const ChatMessage = require('../models/ChatMessage');
 
-// ── 1. Create or Join Chat Session (Public / Customer)
-router.post('/session', async (req, res) => {
+// ── 1. Fetch Sessions for Admin (GET /api/chat/sessions or /api/chat/active)
+router.get('/sessions', async (req, res) => {
   try {
-    const { sessionId, customerName } = req.body;
-    if (!sessionId || !customerName) {
-      return res.status(400).json({ success: false, msg: 'sessionId and customerName are required' });
-    }
-
-    let session = await ChatSession.findById(sessionId);
-    if (!session) {
-      session = new ChatSession({
-        _id: sessionId,
-        customerName: customerName.trim(),
-        status: 'open',
-        messages: [
-          {
-            sender: 'admin',
-            text: `Welcome ${customerName.trim()} to VELORA Concierge! How may our team assist you today?`,
-            timestamp: new Date(),
-          },
-        ],
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      });
-      await session.save();
-
-      const wsHelpers = req.app.get('wsHelpers');
-      if (wsHelpers) {
-        wsHelpers.emitGlobally('active_chats_updated');
-      }
-    }
-
-    res.json({ success: true, session });
+    const sessions = await ChatSession.find({}).sort({ updatedAt: -1 });
+    res.json({ success: true, data: sessions });
   } catch (err) {
-    console.error('Error creating/joining chat session:', err);
-    res.status(500).json({ success: false, msg: 'Server error while starting chat session' });
+    console.error('Error fetching chat sessions:', err);
+    res.status(500).json({ success: false, msg: 'Server error fetching chat sessions' });
   }
 });
 
-// ── 2. Get Single Chat Session by ID (Public for customer polling)
-router.get('/session/:sessionId', async (req, res) => {
+router.get('/active', async (req, res) => {
   try {
-    const session = await ChatSession.findById(req.params.sessionId);
-    if (!session) {
-      return res.status(404).json({ success: false, msg: 'Chat session not found' });
-    }
-    res.json({
-      success: true,
-      _id: session._id,
-      customerName: session.customerName,
-      status: session.status,
-      messages: session.messages || [],
-      updatedAt: session.updatedAt,
-    });
+    const sessions = await ChatSession.find({ status: 'active' }).sort({ updatedAt: -1 });
+    res.json({ success: true, data: sessions });
   } catch (err) {
-    console.error('Error getting chat session:', err);
+    console.error('Error fetching active chat sessions:', err);
     res.status(500).json({ success: false, msg: 'Server error' });
   }
 });
 
-// ── 3. Send Message (Public & Admin - Saves directly to MongoDB)
+// ── 2. Send/Store Message (POST /api/chat/message)
 router.post('/message', async (req, res) => {
   try {
     const { sessionId, sender, text, customerName } = req.body;
 
     if (!sessionId || !sender || !text || !text.trim()) {
-      return res.status(400).json({ success: false, msg: 'sessionId, sender, and text are required' });
-    }
-
-    let session = await ChatSession.findById(sessionId);
-    if (!session) {
-      session = new ChatSession({
-        _id: sessionId,
-        customerName: customerName || 'Guest',
-        status: 'open',
-        messages: [],
-        createdAt: new Date(),
-        updatedAt: new Date(),
+      return res.status(400).json({
+        success: false,
+        msg: 'sessionId, sender, and text are required',
       });
     }
 
-    const newMessage = {
-      sender: sender === 'admin' ? 'admin' : 'customer',
-      text: text.trim(),
-      timestamp: new Date(),
-    };
+    const trimmedText = text.trim();
 
-    session.messages.push(newMessage);
-    session.updatedAt = new Date();
-    if (session.status === 'closed' && sender === 'customer') {
-      session.status = 'open'; // Reopen if customer replies
+    // 1. Create message in ChatMessage collection
+    const newMsg = await ChatMessage.create({
+      sessionId,
+      sender: sender === 'admin' ? 'admin' : 'customer',
+      text: trimmedText,
+      createdAt: new Date(),
+    });
+
+    // 2. Upsert ChatSession with latest message & activity
+    const updatePayload = {
+      lastMessage: trimmedText,
+      status: 'active',
+      updatedAt: new Date(),
+    };
+    if (customerName && customerName.trim()) {
+      updatePayload.customerName = customerName.trim();
     }
 
-    await session.save();
+    const updatedSession = await ChatSession.findOneAndUpdate(
+      { sessionId },
+      { $set: updatePayload, $setOnInsert: { customerName: customerName ? customerName.trim() : 'Guest Customer' } },
+      { upsert: true, new: true }
+    );
 
-    // Broadcast in real-time via WebSocket if available
+    // 3. Real-time broadcast if WebSocket is active
     const wsHelpers = req.app.get('wsHelpers');
     if (wsHelpers) {
-      wsHelpers.emitToRoom(sessionId, 'support_message', newMessage);
-      wsHelpers.emitGlobally('active_chats_updated');
+      wsHelpers.emitToRoom(sessionId, 'support_message', newMsg);
+      wsHelpers.emitGlobally('active_chats_updated', { sessionId, message: newMsg });
     }
 
-    res.json({
+    return res.json({
       success: true,
-      message: newMessage,
-      session,
+      message: newMsg,
+      session: updatedSession,
     });
   } catch (err) {
-    console.error('Error sending chat message:', err);
-    res.status(500).json({ success: false, msg: 'Server error while sending message' });
+    console.error('Error storing chat message:', err);
+    return res.status(500).json({ success: false, msg: 'Server error while storing message' });
   }
 });
 
-// ── 4. Get Active Chat Sessions (Admin/Staff only)
-router.get('/active', [auth, admin], async (req, res) => {
+// ── 3. Fetch Chat History for a Session (GET /api/chat/history?sessionId=xyz or GET /api/chat/history/:sessionId)
+router.get('/history', async (req, res) => {
   try {
-    const sessions = await ChatSession.find({ status: 'open' }).sort({ updatedAt: -1 });
-    res.json(sessions);
-  } catch (err) {
-    console.error('Error fetching active chat sessions:', err);
-    res.status(500).json({ success: false, msg: 'Server Error' });
-  }
-});
-
-// ── 5. Get All Chat Sessions (Admin/Staff only)
-router.get('/all', [auth, admin], async (req, res) => {
-  try {
-    const sessions = await ChatSession.find().sort({ updatedAt: -1 }).limit(100);
-    res.json(sessions);
-  } catch (err) {
-    console.error('Error fetching all chat sessions:', err);
-    res.status(500).json({ success: false, msg: 'Server Error' });
-  }
-});
-
-// ── 6. Get Chat Session Details by ID (Admin/Staff only)
-router.get('/:id', [auth, admin], async (req, res) => {
-  try {
-    const session = await ChatSession.findById(req.params.id);
-    if (!session) {
-      return res.status(404).json({ success: false, msg: 'Session not found' });
+    const sessionId = req.query.sessionId || req.query.id;
+    if (!sessionId) {
+      return res.status(400).json({ success: false, msg: 'sessionId query parameter is required' });
     }
-    res.json(session);
+
+    const messages = await ChatMessage.find({ sessionId }).sort({ createdAt: 1 });
+    return res.json({ success: true, data: messages });
   } catch (err) {
-    console.error('Error fetching session:', err);
-    res.status(500).json({ success: false, msg: 'Server Error' });
+    console.error('Error fetching chat history:', err);
+    return res.status(500).json({ success: false, msg: 'Server error fetching history' });
   }
 });
 
-// ── 7. Close Chat Session (Admin/Staff only)
-router.put('/:id/close', [auth, admin], async (req, res) => {
+router.get('/history/:sessionId', async (req, res) => {
   try {
-    const session = await ChatSession.findById(req.params.id);
+    const { sessionId } = req.params;
+    const messages = await ChatMessage.find({ sessionId }).sort({ createdAt: 1 });
+    return res.json({ success: true, data: messages });
+  } catch (err) {
+    console.error('Error fetching chat history:', err);
+    return res.status(500).json({ success: false, msg: 'Server error fetching history' });
+  }
+});
+
+// ── 4. Close a Chat Session (PUT /api/chat/:id/close)
+router.put('/:id/close', async (req, res) => {
+  try {
+    const sessionId = req.params.id;
+    const session = await ChatSession.findOneAndUpdate(
+      { sessionId },
+      { status: 'closed', updatedAt: new Date() },
+      { new: true }
+    );
+
     if (!session) {
-      return res.status(404).json({ success: false, msg: 'Session not found' });
+      return res.status(404).json({ success: false, msg: 'Chat session not found' });
     }
-    session.status = 'closed';
-    session.updatedAt = new Date();
-    await session.save();
 
     const wsHelpers = req.app.get('wsHelpers');
     if (wsHelpers) {
-      wsHelpers.emitToRoom(req.params.id, 'chat_closed', { sessionId: session._id });
-      wsHelpers.emitGlobally('active_chats_updated');
+      wsHelpers.emitToRoom(sessionId, 'chat_closed', { sessionId });
+      wsHelpers.emitGlobally('active_chats_updated', { sessionId, status: 'closed' });
     }
 
-    res.json({ success: true, session });
+    return res.json({ success: true, session });
   } catch (err) {
-    console.error('Error closing session:', err);
+    console.error('Error closing chat session:', err);
+    return res.status(500).json({ success: false, msg: 'Server error closing session' });
+  }
+});
+
+// Legacy backward-compatibility endpoints
+router.get('/all', async (req, res) => {
+  try {
+    const sessions = await ChatSession.find({}).sort({ updatedAt: -1 });
+    res.json({ success: true, data: sessions });
+  } catch (err) {
+    res.status(500).json({ success: false, msg: 'Server Error' });
+  }
+});
+
+router.get('/:id', async (req, res) => {
+  try {
+    const session = await ChatSession.findOne({ sessionId: req.params.id });
+    if (!session) {
+      return res.status(404).json({ success: false, msg: 'Session not found' });
+    }
+    const messages = await ChatMessage.find({ sessionId: req.params.id }).sort({ createdAt: 1 });
+    res.json({ success: true, session, messages });
+  } catch (err) {
     res.status(500).json({ success: false, msg: 'Server Error' });
   }
 });

@@ -39,6 +39,7 @@ const defaultOrigins = [
   'http://localhost:3000',
   'http://localhost:5000',
   'https://restaurant-psi-henna-35.vercel.app',
+  'https://restaurant-4prc26emy-satishs-projects-76d6d643.vercel.app',
   'https://letoiledoree.com',
   'https://www.letoiledoree.com',
 ];
