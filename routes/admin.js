@@ -238,8 +238,8 @@ router.put('/users/:id/approve', async (req, res) => {
 
 router.put('/users/:id/role', async (req, res) => {
   try {
-    const { role } = req.body;
-    if (!['customer', 'admin'].includes(role)) {
+    const validRoles = ['customer', 'admin', 'owner', 'manager', 'chef', 'kitchen', 'waiter', 'captain', 'staff'];
+    if (!validRoles.includes(role)) {
       return res.status(400).json({ msg: 'Invalid role' });
     }
 
