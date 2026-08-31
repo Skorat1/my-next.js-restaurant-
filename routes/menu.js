@@ -1,7 +1,5 @@
 const express = require('express');
 const router = express.Router();
-const path = require('path');
-const fs = require('fs');
 const multer = require('multer');
 const Menu = require('../models/Menu');
 const Review = require('../models/Review');
@@ -10,79 +8,96 @@ const auth = require('../middleware/auth');
 const admin = require('../middleware/admin');
 const cache = require('../middleware/cache');
 
-// ── Multer config — save uploaded menu images to backend/uploads
-const UPLOAD_DIR = path.join(__dirname, '..', 'uploads');
-if (!fs.existsSync(UPLOAD_DIR)) {
-  fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-}
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, UPLOAD_DIR),
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase() || '.jpg';
-    const safeName = file.originalname
-      .replace(/\.[^.]+$/, '')       // strip original extension
-      .replace(/[^a-z0-9]+/gi, '-')  // spaces & special chars → dashes
-      .replace(/^-+|-+$/g, '')       // trim dashes
-      .toLowerCase();
-    const base = safeName || 'dish';
-    cb(null, `${base}-${Date.now()}${ext}`);
-  },
-});
-
-const fileFilter = (req, file, cb) => {
-  const allowed = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.jfif'];
-  const ext = path.extname(file.originalname).toLowerCase();
-  if (allowed.includes(ext)) return cb(null, true);
-  cb(new Error('Only image files are allowed'));
-};
-
+// ── Multer Memory Storage — safe for Serverless / Vercel (no read-only disk write errors)
 const upload = multer({
-  storage,
-  fileFilter,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB limit
 });
 
-// Helper — parse multipart vs JSON body and always return a plain object
+// Helper — parse multipart vs JSON body safely
 function parseBody(req) {
-  if (req.is('multipart/form-data')) {
-    const { name, description, price, category, image, available, premium } = req.body;
-    const body = {
-      name: name || '',
-      description: description || '',
-      price: price !== undefined ? Number(price) : undefined,
-      category: category || '',
-      image: image || '',
-      available: available !== undefined ? available === 'true' : undefined,
-      premium: premium !== undefined ? premium === 'true' : undefined,
-    };
-    // If a file was uploaded, override image with the stored filename
-    if (req.file) body.image = req.file.filename;
-    return body;
+  const isMultipart = req.is('multipart/form-data');
+  const src = req.body || {};
+
+  const body = {};
+
+  if (src.name !== undefined) body.name = String(src.name).trim();
+  if (src.description !== undefined) body.description = String(src.description).trim();
+  if (src.price !== undefined) body.price = Number(src.price);
+  if (src.category !== undefined) body.category = String(src.category).trim();
+  
+  if (src.available !== undefined) body.available = src.available === true || src.available === 'true';
+  if (src.premium !== undefined) body.premium = src.premium === true || src.premium === 'true';
+  if (src.vegetarian !== undefined) body.vegetarian = src.vegetarian === true || src.vegetarian === 'true';
+  if (src.spicy !== undefined) body.spicy = src.spicy === true || src.spicy === 'true';
+  if (src.popular !== undefined) body.popular = src.popular === true || src.popular === 'true';
+  if (src.isSpecial !== undefined) body.isSpecial = src.isSpecial === true || src.isSpecial === 'true';
+  
+  if (src.station !== undefined) body.station = src.station;
+  if (src.estimatedPrepTime !== undefined) body.estimatedPrepTime = Number(src.estimatedPrepTime) || 15;
+
+  if (src.addons !== undefined) {
+    if (typeof src.addons === 'string') {
+      try {
+        body.addons = JSON.parse(src.addons);
+      } catch {
+        body.addons = [];
+      }
+    } else if (Array.isArray(src.addons)) {
+      body.addons = src.addons;
+    }
   }
-  return req.body;
+
+  if (src.dietary !== undefined) {
+    if (typeof src.dietary === 'string') {
+      try {
+        body.dietary = JSON.parse(src.dietary);
+      } catch {
+        body.dietary = src.dietary.split(',').map(s => s.trim()).filter(Boolean);
+      }
+    } else if (Array.isArray(src.dietary)) {
+      body.dietary = src.dietary;
+    }
+  }
+
+  // Handle image upload from buffer or string URL
+  if (req.file) {
+    const mime = req.file.mimetype || 'image/jpeg';
+    const base64 = req.file.buffer.toString('base64');
+    body.image = `data:${mime};base64,${base64}`;
+  } else if (src.image && typeof src.image === 'string' && src.image.trim()) {
+    body.image = src.image.trim();
+  }
+
+  return body;
 }
 
 // Helper — enrich menu items with avg ratings
 async function enrichWithRatings(menuItems) {
-  const reviews = await Review.aggregate([
-    { $match: { status: 'Approved' } },
-    { $group: { _id: '$menuItem', avgRating: { $avg: '$rating' }, count: { $sum: 1 } } },
-  ]);
-  const ratingMap = {};
-  reviews.forEach((r) => {
-    ratingMap[r._id.toString()] = {
-      avgRating: Math.round(r.avgRating * 10) / 10,
-      reviewCount: r.count,
-    };
-  });
-  return menuItems.map((item) => {
-    const obj = item.toObject ? item.toObject() : item;
-    const r = ratingMap[obj._id.toString()];
-    obj.rating = r ? r.avgRating : 0;
-    obj.reviewCount = r ? r.reviewCount : 0;
-    return obj;
-  });
+  try {
+    const reviews = await Review.aggregate([
+      { $match: { status: 'Approved' } },
+      { $group: { _id: '$menuItem', avgRating: { $avg: '$rating' }, count: { $sum: 1 } } },
+    ]);
+    const ratingMap = {};
+    reviews.forEach((r) => {
+      if (r._id) {
+        ratingMap[r._id.toString()] = {
+          avgRating: Math.round(r.avgRating * 10) / 10,
+          reviewCount: r.count,
+        };
+      }
+    });
+    return menuItems.map((item) => {
+      const obj = item.toObject ? item.toObject() : item;
+      const r = obj._id ? ratingMap[obj._id.toString()] : null;
+      obj.rating = r ? r.avgRating : 0;
+      obj.reviewCount = r ? r.reviewCount : 0;
+      return obj;
+    });
+  } catch (enrichErr) {
+    return menuItems;
+  }
 }
 
 // GET /api/menu — with optional search, category, price, dietary filters
@@ -110,40 +125,7 @@ router.get('/', cache(300), async (req, res) => {
     const enriched = await enrichWithRatings(menuItems);
     res.json(enriched);
   } catch (err) {
-    res.status(500).json({ msg: 'Server Error' });
-  }
-});
-
-// GET /api/menu/reorder/:userId — suggest items from user's past orders
-router.get('/reorder/:userId', auth, async (req, res) => {
-  try {
-    const orders = await Order.find({ user: req.params.userId })
-      .sort({ createdAt: -1 })
-      .limit(10)
-      .lean();
-
-    // Count frequency of each item ordered
-    const freq = {};
-    orders.forEach((order) => {
-      order.items.forEach((item) => {
-        const id = item.itemId.toString();
-        freq[id] = (freq[id] || 0) + item.quantity;
-      });
-    });
-
-    const topIds = Object.entries(freq)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 4)
-      .map(([id]) => id);
-
-    if (topIds.length === 0) return res.json([]);
-
-    const items = await Menu.find({ _id: { $in: topIds }, available: true });
-    const enriched = await enrichWithRatings(items);
-    // Sort by frequency
-    enriched.sort((a, b) => (freq[b._id.toString()] || 0) - (freq[a._id.toString()] || 0));
-    res.json(enriched);
-  } catch (err) {
+    console.error('GET /api/menu error:', err);
     res.status(500).json({ msg: 'Server Error' });
   }
 });
@@ -158,35 +140,57 @@ router.get('/categories', cache(300), async (req, res) => {
   }
 });
 
+// POST /api/menu — Add new menu item
 router.post('/', [auth, admin, upload.single('image')], async (req, res) => {
   try {
     const body = parseBody(req);
-    if (!body.name || !body.description || !body.price || !body.category) {
-      return res.status(400).json({ msg: 'Name, description, price, and category are required' });
+    if (!body.name || !body.description || body.price === undefined || !body.category) {
+      return res.status(400).json({ msg: 'Name, description, price, and category are required.' });
     }
-    const item = await new Menu(body).save();
+    if (!body.image) {
+      body.image = 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=800&q=80';
+    }
+    const item = new Menu(body);
+    await item.save();
     res.status(201).json(item);
   } catch (err) {
-    res.status(500).json({ msg: 'Server Error' });
+    console.error('POST /api/menu error:', err);
+    res.status(400).json({ msg: err.message || 'Failed to save menu item.' });
   }
 });
 
+// PUT /api/menu/:id — Update existing menu item
 router.put('/:id', [auth, admin, upload.single('image')], async (req, res) => {
   try {
     const body = parseBody(req);
-    const item = await Menu.findByIdAndUpdate(req.params.id, body, { new: true, runValidators: true });
-    if (!item) return res.status(404).json({ msg: 'Item not found' });
-    res.json(item);
+    const existing = await Menu.findById(req.params.id);
+    if (!existing) return res.status(404).json({ msg: 'Menu item not found.' });
+
+    // If no new image was provided, keep the existing image
+    if (!body.image) {
+      body.image = existing.image;
+    }
+
+    const updated = await Menu.findByIdAndUpdate(
+      req.params.id,
+      { $set: body },
+      { new: true, runValidators: true }
+    );
+    res.json(updated);
   } catch (err) {
-    res.status(500).json({ msg: 'Server Error' });
+    console.error('PUT /api/menu/:id error:', err);
+    res.status(400).json({ msg: err.message || 'Failed to update menu item.' });
   }
 });
 
+// DELETE /api/menu/:id — Remove menu item
 router.delete('/:id', [auth, admin], async (req, res) => {
   try {
-    await Menu.findByIdAndDelete(req.params.id);
-    res.json({ success: true });
+    const item = await Menu.findByIdAndDelete(req.params.id);
+    if (!item) return res.status(404).json({ msg: 'Menu item not found.' });
+    res.json({ success: true, msg: 'Menu item deleted successfully.' });
   } catch (err) {
+    console.error('DELETE /api/menu/:id error:', err);
     res.status(500).json({ msg: 'Server Error' });
   }
 });
