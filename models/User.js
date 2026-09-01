@@ -17,6 +17,19 @@ const UserSchema = new mongoose.Schema({
   lastVisitDate: { type: Date },
   averageOrderValue: { type: Number, default: 0 },
   
+  phone: { type: String, default: '' },
+  avatar: { type: String, default: '' }, // Custom photo URL / Base64 image
+  avatarIcon: { type: String, default: 'crown' }, // Preset icon identifier
+  avatarColor: { type: String, default: 'amber' }, // Accent badge color
+  addresses: [{
+    id: { type: String },
+    label: { type: String, default: 'Home' },
+    line: { type: String },
+    city: { type: String },
+    pincode: { type: String },
+    isPrimary: { type: Boolean, default: false }
+  }],
+  
   membership: {
     tier: { type: String, enum: ['silver', 'gold', 'platinum'], default: 'silver' },
     active: { type: Boolean, default: false },

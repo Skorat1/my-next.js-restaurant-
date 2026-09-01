@@ -91,10 +91,30 @@ function brandedEmail(title, bodyHtml) {
   </div>`;
 }
 
+function formatUserResponse(user) {
+  return {
+    _id: user._id,
+    name: user.name,
+    email: user.email,
+    phone: user.phone || '',
+    avatar: user.avatar || '',
+    avatarIcon: user.avatarIcon || 'crown',
+    avatarColor: user.avatarColor || 'amber',
+    addresses: user.addresses || [],
+    role: user.role,
+    isVerified: user.isVerified,
+    isApproved: user.isApproved,
+    loyaltyPoints: user.loyaltyPoints || 0,
+    membership: user.membership || { tier: 'silver', active: false },
+    dietaryPreferences: user.dietaryPreferences || [],
+    tags: user.tags || [],
+  };
+}
+
 // SIGNUP
 router.post('/signup', async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, phone } = req.body;
     let user = await User.findOne({ email });
     if (user) return res.status(400).json({ msg: 'User already exists' });
 
@@ -119,6 +139,7 @@ router.post('/signup', async (req, res) => {
     user = new User({
       name,
       email,
+      phone: phone || '',
       password: hashedPassword,
       role: requestedRole,
       isApproved,
@@ -166,7 +187,7 @@ router.post('/signup', async (req, res) => {
     if (!user.isApproved) {
       return res.json({
         msg: 'registration_pending',
-        user: { _id: user._id, name, email, role: user.role, isVerified: user.isVerified, isApproved: user.isApproved },
+        user: formatUserResponse(user),
       });
     }
 
@@ -176,7 +197,7 @@ router.post('/signup', async (req, res) => {
     res.json({
       token,
       refreshToken,
-      user: { _id: user._id, name, email, role: user.role, isVerified: user.isVerified, isApproved: user.isApproved },
+      user: formatUserResponse(user),
     });
   } catch (err) {
     res.status(500).send('Server error');
@@ -229,7 +250,7 @@ router.post('/login', async (req, res) => {
     res.json({
       token,
       refreshToken,
-      user: { _id: user._id, name: user.name, email: user.email, role: user.role, isVerified: user.isVerified, isApproved: user.isApproved },
+      user: formatUserResponse(user),
     });
   } catch (err) {
     res.status(500).send('Server error');
@@ -257,7 +278,7 @@ router.post('/refresh', async (req, res) => {
     res.json({
       token: newToken,
       refreshToken: newRefreshToken,
-      user: { _id: user._id, name: user.name, email: user.email, role: user.role, isVerified: user.isVerified, isApproved: user.isApproved },
+      user: formatUserResponse(user),
     });
   } catch (err) {
     res.status(401).json({ msg: 'Invalid or expired refresh token' });
@@ -298,7 +319,7 @@ router.get('/verify/:token', async (req, res) => {
     }
 
     if (user.isVerified) {
-      return res.json({ msg: 'This email has already been verified.', user: { _id: user._id, name: user.name, email: user.email, role: user.role, isVerified: true } });
+      return res.json({ msg: 'This email has already been verified.', user: formatUserResponse(user) });
     }
 
     user.isVerified = true;
@@ -321,7 +342,7 @@ router.get('/verify/:token', async (req, res) => {
       console.error('Error sending verified confirmation email:', emailErr);
     }
 
-    res.json({ msg: 'Email verified successfully!', user: { _id: user._id, name: user.name, email: user.email, role: user.role, isVerified: true } });
+    res.json({ msg: 'Email verified successfully!', user: formatUserResponse(user) });
   } catch (err) {
     console.error(err);
     res.status(500).json({ msg: 'Server error' });
@@ -360,32 +381,45 @@ router.get('/me', auth, async (req, res) => {
   try {
     const user = await User.findById(req.user._id).select('-password');
     if (!user) return res.status(404).json({ msg: 'User not found' });
-    res.json(user);
+    res.json(formatUserResponse(user));
   } catch (err) {
     res.status(500).json({ msg: 'Server error' });
   }
 });
 
-// PUT /me — Update user profile
-router.put('/me', auth, async (req, res) => {
+// PUT /me & PUT /profile — Update user profile
+const handleUpdateProfile = async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, phone, avatar, avatarIcon, avatarColor, addresses } = req.body;
     const user = await User.findById(req.user._id);
     if (!user) return res.status(404).json({ msg: 'User not found' });
 
-    if (name) user.name = name;
-    if (email) user.email = email;
-    if (password) {
+    if (name !== undefined) user.name = name;
+    if (email !== undefined) user.email = email;
+    if (phone !== undefined) user.phone = phone;
+    if (avatar !== undefined) user.avatar = avatar;
+    if (avatarIcon !== undefined) user.avatarIcon = avatarIcon;
+    if (avatarColor !== undefined) user.avatarColor = avatarColor;
+    if (addresses !== undefined && Array.isArray(addresses)) user.addresses = addresses;
+
+    if (password && password.trim()) {
       const salt = await bcrypt.genSalt(10);
       user.password = await bcrypt.hash(password, salt);
     }
 
     await user.save();
-    res.json({ msg: 'Profile updated', user: { _id: user._id, name: user.name, email: user.email, role: user.role } });
+    res.json({
+      msg: 'Profile updated successfully',
+      user: formatUserResponse(user),
+    });
   } catch (err) {
-    res.status(500).json({ msg: 'Server error' });
+    console.error('Profile update error:', err);
+    res.status(500).json({ msg: 'Server error updating profile' });
   }
-});
+};
+
+router.put('/me', auth, handleUpdateProfile);
+router.put('/profile', auth, handleUpdateProfile);
 
 // GET /me/reservations — Get user's reservations
 router.get('/me/reservations', auth, async (req, res) => {

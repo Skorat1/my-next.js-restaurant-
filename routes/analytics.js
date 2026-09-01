@@ -108,11 +108,11 @@ router.get('/forecast', cache(3600), async (req, res) => {
       { $sort: { _id: 1 } },
     ]);
 
-    // Simple AI/ML mock: Moving Average + Trend for next 7 days
+
     const forecasts = [];
     const today = new Date();
     
-    // If not enough data, return mock data
+    
     if (historicalData.length < 3) {
       for(let i=1; i<=7; i++) {
         const d = new Date(today);
@@ -145,7 +145,7 @@ router.get('/forecast', cache(3600), async (req, res) => {
 
     res.json({ forecasts });
   } catch (err) {
-    console.error('GET /analytics/forecast error:', err);
+    console.error('GET/analytics/forecast error:', err);
     res.status(500).json({ msg: 'Server Error' });
   }
 });
