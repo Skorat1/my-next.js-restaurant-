@@ -8,6 +8,7 @@ const path = require('path');
 const connectDB = require('./config/db');
 const logger = require('./config/logger');
 require('dotenv').config();
+require('./config/firebaseAdmin');
 
 const app = express();
 
@@ -137,6 +138,7 @@ app.use('/api/crm', require('./routes/crm'));
 app.use('/api/tables', require('./routes/tables'));
 app.use('/api/shifts', require('./routes/shifts'));
 app.use('/api/chat', require('./routes/chat'));
+app.use('/api/notifications', require('./routes/notificationRoutes'));
 
 // ── 404 handler
 app.use((req, res) => {

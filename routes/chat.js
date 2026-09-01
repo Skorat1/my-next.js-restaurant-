@@ -80,6 +80,17 @@ router.post('/message', async (req, res) => {
       wsHelpers.emitGlobally('active_chats_updated', { sessionId, message: newMsg });
     }
 
+    // 4. Send Firebase Push Notification
+    try {
+      const { sendChatNotification } = require('../services/fcmService');
+      sendChatNotification({
+        tableNumber: sessionId,
+        text: trimmedText,
+      }).catch(e => console.error('Chat push notification error:', e));
+    } catch (pushErr) {
+      // Non-blocking push notification error
+    }
+
     return res.json({
       success: true,
       message: newMsg,

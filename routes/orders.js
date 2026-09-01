@@ -350,6 +350,14 @@ router.post('/', optionalAuth, async (req, res) => {
       console.error('WebSocket helper broadcast error:', wsErr);
     }
 
+    // Firebase Push Notification for New Order
+    try {
+      const { sendOrderNotification } = require('../services/fcmService');
+      sendOrderNotification(order, null, 'new_order').catch(e => console.error('Order push error:', e));
+    } catch (pushErr) {
+      // Non-blocking
+    }
+
     try {
       const { sendEmail } = require('../config/email');
       const itemsListHtml = detailedItems.map(i => `<li>${i.quantity}x ${i.name} - ₹${i.lineTotal}</li>`).join('');
@@ -436,6 +444,27 @@ const updateStatusHandler = async (req, res) => {
         io.to(`order_${order.orderNumber}`).emit('order_status_updated', order);
       }
       io.emit('order_updated', order);
+    }
+
+    // Firebase Push Notification for Order Status Update
+    try {
+      const { sendOrderNotification, sendToDevice } = require('../services/fcmService');
+      const updateKey = status.toLowerCase().replace(/\s+/g, '_');
+      
+      // If order belongs to a user, send to customer's FCM device tokens
+      if (order.user) {
+        User.findById(order.user).then(customerUser => {
+          if (customerUser && customerUser.fcmTokens && customerUser.fcmTokens.length > 0) {
+            customerUser.fcmTokens.forEach(fcmTok => {
+              sendOrderNotification(order, fcmTok, updateKey).catch(() => {});
+            });
+          }
+        }).catch(() => {});
+      }
+      // Also broadcast to admin topics
+      sendOrderNotification(order, null, updateKey).catch(e => console.error('Order status push error:', e));
+    } catch (pushErr) {
+      // Non-blocking
     }
 
     res.json({ order, msg: 'Order status updated successfully.' });

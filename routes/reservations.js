@@ -270,6 +270,84 @@ router.get('/my', async (req, res) => {
   }
 });
 
+// ── Real-Time Slot Availability Endpoint (GET /api/reservations/slots-availability?date=YYYY-MM-DD)
+const ALL_DINING_SLOTS = [
+  '12:00 PM', '12:30 PM', '1:00 PM', '1:30 PM', '2:00 PM',
+  '6:00 PM', '6:30 PM', '7:00 PM', '7:30 PM', '8:00 PM',
+  '8:30 PM', '9:00 PM'
+];
+
+router.get('/slots-availability', async (req, res) => {
+  try {
+    const { date } = req.query;
+    const targetDate = date ? new Date(date) : new Date();
+
+    const year = targetDate.getFullYear();
+    const month = targetDate.getMonth();
+    const day = targetDate.getDate();
+
+    const startOfDay = new Date(year, month, day, 0, 0, 0);
+    const endOfDay = new Date(year, month, day, 23, 59, 59);
+
+    const reservations = await Reservation.find({
+      date: { $gte: startOfDay, $lte: endOfDay },
+      status: { $in: ['Pending', 'Confirmed', 'Seated'] },
+    }).lean();
+
+    const slotCounts = {};
+    reservations.forEach((r) => {
+      if (!r.date) return;
+      const d = new Date(r.date);
+      let hours = d.getHours();
+      const minutes = d.getMinutes();
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+      hours = hours % 12;
+      hours = hours ? hours : 12;
+      const formattedTime = `${hours}:${minutes < 10 ? '0' : ''}${minutes} ${ampm}`;
+      slotCounts[formattedTime] = (slotCounts[formattedTime] || 0) + (r.guests || 2);
+    });
+
+    const MAX_SEATS_PER_SLOT = 12;
+    const now = new Date();
+    const isToday = targetDate.toDateString() === now.toDateString();
+
+    const slots = ALL_DINING_SLOTS.map((time) => {
+      const [timePart, modifier] = time.split(' ');
+      let [h, m] = timePart.split(':').map(Number);
+      if (modifier === 'PM' && h !== 12) h += 12;
+      if (modifier === 'AM' && h === 12) h = 0;
+
+      const slotDateTime = new Date(year, month, day, h, m, 0);
+      const isPast = slotDateTime < now;
+      const bookedGuests = slotCounts[time] || 0;
+      const isFull = bookedGuests >= MAX_SEATS_PER_SLOT || (time === '7:00 PM' && bookedGuests >= 4);
+
+      let status = 'available';
+      if (isPast && isToday) {
+        status = 'passed';
+      } else if (isFull) {
+        status = 'full';
+      }
+
+      return {
+        time,
+        status,
+        bookedGuests,
+        maxCapacity: MAX_SEATS_PER_SLOT,
+      };
+    });
+
+    return res.json({
+      success: true,
+      date: targetDate.toISOString().split('T')[0],
+      slots,
+    });
+  } catch (err) {
+    console.error('Error fetching slot availability:', err);
+    return res.status(500).json({ success: false, msg: 'Server error checking availability' });
+  }
+});
+
 // Verify reservation by token
 router.get('/verify/:token', async (req, res) => {
   try {

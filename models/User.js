@@ -47,6 +47,8 @@ const UserSchema = new mongoose.Schema({
     event: { type: String }, // 'Birthday', 'Anniversary', etc.
     date: { type: Date } 
   }],
+  firebaseUid: { type: String, sparse: true },
+  fcmTokens: { type: [String], default: [] },
 }, { timestamps: true });
 
 UserSchema.index({ role: 1 });
