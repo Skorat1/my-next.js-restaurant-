@@ -14,25 +14,29 @@ async function sendToDevice(fcmToken, notification, data = {}) {
     return { success: false, reason: 'No FCM token provided' };
   }
 
+  const notificationPayload = {
+    title: notification.title || 'VELORA Restaurant',
+    body: notification.body || '',
+  };
+  if (notification.imageUrl) {
+    notificationPayload.imageUrl = notification.imageUrl;
+  }
+
   const message = {
     token: fcmToken,
-    notification: {
-      title: notification.title,
-      body: notification.body,
-      imageUrl: notification.imageUrl,
-    },
+    notification: notificationPayload,
     data: Object.fromEntries(
-      Object.entries(data).map(([k, v]) => [k, typeof v === 'string' ? v : JSON.stringify(v)])
+      Object.entries(data || {}).map(([k, v]) => [k, typeof v === 'string' ? v : JSON.stringify(v)])
     ),
     webpush: {
       notification: {
-        title: notification.title,
-        body: notification.body,
+        title: notification.title || 'VELORA Restaurant',
+        body: notification.body || '',
         icon: notification.icon || '/icons/icon-192x192.png',
         badge: '/icons/badge-72x72.png',
       },
       fcmOptions: {
-        link: data.url || '/',
+        link: (data && data.url) || '/',
       },
     },
   };
@@ -56,24 +60,29 @@ async function sendToTopic(topic, notification, data = {}) {
     return { success: false, reason: 'Firebase Admin not initialized' };
   }
 
+  const notificationPayload = {
+    title: notification.title || 'VELORA Restaurant',
+    body: notification.body || '',
+  };
+  if (notification.imageUrl) {
+    notificationPayload.imageUrl = notification.imageUrl;
+  }
+
   const message = {
     topic,
-    notification: {
-      title: notification.title,
-      body: notification.body,
-      imageUrl: notification.imageUrl,
-    },
+    notification: notificationPayload,
     data: Object.fromEntries(
-      Object.entries(data).map(([k, v]) => [k, typeof v === 'string' ? v : JSON.stringify(v)])
+      Object.entries(data || {}).map(([k, v]) => [k, typeof v === 'string' ? v : JSON.stringify(v)])
     ),
     webpush: {
       notification: {
-        title: notification.title,
-        body: notification.body,
+        title: notification.title || 'VELORA Restaurant',
+        body: notification.body || '',
         icon: notification.icon || '/icons/icon-192x192.png',
+        badge: '/icons/badge-72x72.png',
       },
       fcmOptions: {
-        link: data.url || '/',
+        link: (data && data.url) || '/',
       },
     },
   };
@@ -104,7 +113,7 @@ async function sendOrderNotification(order, fcmToken = null, updateType = 'new_o
   const notification = {
     title: titles[updateType] || `Order Update: #${order.orderNumber || ''}`,
     body: `Table ${order.tableNumber || 'N/A'} • Total: $${Number(order.totalAmount || 0).toFixed(2)}`,
-    icon: '/icons/icon-192x192.png',
+    icon: '/icon.svg',
   };
 
   const data = {
@@ -127,9 +136,9 @@ async function sendOrderNotification(order, fcmToken = null, updateType = 'new_o
  */
 async function sendChatNotification(message, fcmToken = null) {
   const notification = {
-    title: `💬 Message from Table ${message.tableNumber || 'Customer'}`,
+    title: `💬 Message from ${message.customerName || (message.tableNumber ? `Table ${message.tableNumber}` : 'Customer')}`,
     body: message.text || message.content || 'New chat message received.',
-    icon: '/icons/icon-192x192.png',
+    icon: '/icon.svg',
   };
 
   const data = {

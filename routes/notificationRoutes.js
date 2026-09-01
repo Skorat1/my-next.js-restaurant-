@@ -24,17 +24,24 @@ router.post('/fcm-token', optionalFirebaseAuth, async (req, res) => {
       });
     }
 
-    // If admin or staff, auto-subscribe to admin channels
-    if (role === 'admin' || role === 'manager' || (req.user && req.user.role === 'admin')) {
-      if (isFirebaseAdminInitialized() && adminMessaging) {
-        await adminMessaging.subscribeToTopic([token], 'admin_orders');
-        await adminMessaging.subscribeToTopic([token], 'admin_chat');
+    // Auto-subscribe to topics
+    if (isFirebaseAdminInitialized() && adminMessaging) {
+      try {
+        if (role === 'admin' || role === 'manager' || (req.user && req.user.role === 'admin')) {
+          await adminMessaging.subscribeToTopic([token], 'admin_orders');
+          await adminMessaging.subscribeToTopic([token], 'admin_chat');
+          await adminMessaging.subscribeToTopic([token], 'admins');
+        } else {
+          await adminMessaging.subscribeToTopic([token], 'customers');
+        }
+      } catch (topicErr) {
+        console.warn('Warning: Could not subscribe token to FCM topic:', topicErr);
       }
     }
 
     return res.status(200).json({
       success: true,
-      message: 'FCM token registered successfully',
+      message: 'FCM token registered and subscribed successfully',
     });
   } catch (error) {
     console.error('Error saving FCM token:', error);
