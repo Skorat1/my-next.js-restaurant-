@@ -9,6 +9,7 @@ const Order = require('../models/Order');
 const Review = require('../models/Review');
 const Coupon = require('../models/Coupon');
 const ActivityLog = require('../models/ActivityLog');
+const ChatSession = require('../models/ChatSession');
 const auth = require('../middleware/auth');
 const admin = require('../middleware/admin');
 const bcrypt = require('bcryptjs');
@@ -38,6 +39,7 @@ router.get('/stats', async (req, res) => {
       pendingReviews,
       totalCoupons,
       activeCoupons,
+      activeChats,
       recentReservations,
       recentOrders,
     ] = await Promise.all([
@@ -56,6 +58,7 @@ router.get('/stats', async (req, res) => {
       Review.countDocuments({ status: 'Pending' }),
       Coupon.countDocuments(),
       Coupon.countDocuments({ active: true }),
+      ChatSession.countDocuments({ status: 'active' }),
       Reservation.find({ date: { $gte: todayStart } }).sort({ date: 1 }).limit(8),
       Order.find().sort({ createdAt: -1 }).limit(8),
     ]);
@@ -77,7 +80,11 @@ router.get('/stats', async (req, res) => {
         pendingReviews,
         totalCoupons,
         activeCoupons,
+        activeChats,
       },
+      pendingReservations,
+      pendingOrders,
+      activeChats,
       recentReservations,
       recentOrders,
     });

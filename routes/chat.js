@@ -80,6 +80,19 @@ router.post('/message', async (req, res) => {
       wsHelpers.emitGlobally('active_chats_updated', { sessionId, message: newMsg });
     }
 
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('support_message', {
+        sessionId,
+        customerName: updatedSession?.customerName || customerName || 'Customer',
+        message: newMsg,
+        text: trimmedText,
+        sender: newMsg.sender,
+        createdAt: newMsg.createdAt,
+      });
+      io.emit('active_chats_updated', { sessionId, message: newMsg, session: updatedSession });
+    }
+
     // 4. Send Firebase Push Notification
     try {
       const { sendChatNotification } = require('../services/fcmService');
@@ -147,6 +160,12 @@ router.put('/:id/close', async (req, res) => {
     if (wsHelpers) {
       wsHelpers.emitToRoom(sessionId, 'chat_closed', { sessionId });
       wsHelpers.emitGlobally('active_chats_updated', { sessionId, status: 'closed' });
+    }
+
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('chat_closed', { sessionId });
+      io.emit('active_chats_updated', { sessionId, status: 'closed' });
     }
 
     return res.json({ success: true, session });
