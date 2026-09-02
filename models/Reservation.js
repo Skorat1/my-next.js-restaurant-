@@ -1,9 +1,9 @@
 const mongoose = require('mongoose');
 
 const ReservationSchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  email: { type: String, required: true },
-  phone: { type: String },
+  guestName: { type: String, required: true },
+  guestemail: { type: String, required: true },
+  guestphone: { type: String },
   date: { type: Date, required: true },
   guests: { type: Number, default: 2 },
   notes: { type: String },
